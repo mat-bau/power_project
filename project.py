@@ -19,5 +19,21 @@ def My_Amazing_Grid():
     # Your code goes he
     # Do not forget to follow the relevant indentation when you submit
 
+    # Grid 1 - Tilmans
+
+
+
+    # Grid 2 - Scupp
+
+
+
+    # Grid 3 - Bauvir
+
+
+    #  Grid 4 - Tilmans
+
+
+    #   Grid 5 - Schupp
+
 
     return net
