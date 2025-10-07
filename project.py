@@ -135,6 +135,37 @@ def My_Amazing_Grid():
 
     # Grid 2 - Scupp-------------------------------------------------------------------------------
 
+    # Création busses
+    B15 = pp.create_bus(net, vn_kv=20, name="B15")
+    B17 = pp.create_bus(net, vn_kv=380, name="B17")
+    B18 = pp.create_bus(net, vn_kv=15, name="B18")
+    B19 = pp.create_bus(net, vn_kv=150, name="B19")
+    B20 = pp.create_bus(net, vn_kv=20, name="B20")
+    B21 = pp.create_bus(net, vn_kv=150, name="B21")
+    B22 = pp.create_bus(net, vn_kv=15, name="B22")
+    B23 = pp.create_bus(net, vn_kv=380, name="B23")
+
+    # Création Generators
+    G_B15 = pp.create_gen(net, bus=B15, p_mw=300, max_q_mvar=200, min_q_mvar=-50, sn_mva=450, vm_pu=0.98, slack=False, name="G_B15")
+    G_B20 = pp.create_gen(net, bus=B20, p_mw=300, max_q_mvar=200, min_q_mvar=-50, sn_mva=450, vm_pu=0.98, slack=False, name="G_B20")
+
+    # Création Loads
+    LOAD_B18 = pp.create_load(net, bus=B18, p_mw=360, q_mvar=180, name="LOAD_B18")
+    LOAD_B22 = pp.create_load(net, bus=B22, p_mw=360, q_mvar=180, name="LOAD_B22")
+
+    # Création Shunts
+    C_B18 = pp.create_shunt(net, bus=B18, q_mvar=45, p_mw=0, name="C_B18")
+    C_B19 = pp.create_shunt(net, bus=B19, q_mvar=75, p_mw=0, name="C_B19")
+    C_B21 = pp.create_shunt(net, bus=B21, q_mvar=75, p_mw=0, name="C_B21")
+    C_B22 = pp.create_shunt(net, bus=B22, q_mvar=45, p_mw=0, name="C_B22")
+
+    # Création Transformers
+    TRAFO_B15B19 = pp.create_transformer(net, hv_bus=B19, lv_bus=B15, std_type="_20kV_150kV_type", name="TRAFO_B15B19")
+    TRAFO_B17B19 = pp.create_transformer(net, hv_bus=B17, lv_bus=B19, std_type="_150kV_380kV_type", name="TRAFO_B17B19")
+    TRAFO_B18B19 = pp.create_transformer(net, hv_bus=B19, lv_bus=B18, std_type="_15kV_150kV_type", name="TRAFO_B18B19")
+    TRAFO_B20B21 = pp.create_transformer(net, hv_bus=B21, lv_bus=B20, std_type="_20kV_150kV_type", name="TRAFO_B20B21")
+    TRAFO_B21B22 = pp.create_transformer(net, hv_bus=B21, lv_bus=B22, std_type="_15kV_150kV_type", name="TRAFO_B21B22")
+    TRAFO_B21B23 = pp.create_transformer(net, hv_bus=B23, lv_bus=B21, std_type="_150kV_380kV_type", name="TRAFO_B21B23")
 
 
     # Grid 3 - Bauvir -------------------------------------------------------------------------------
@@ -190,7 +221,22 @@ def My_Amazing_Grid():
 
     # Grid 4 - Tilmans-------------------------------------------------------------------------------
 
+    # Création busses
+    B24 = pp.create_bus(net, vn_kv=380, name="B24")
+    B25 = pp.create_bus(net, vn_kv=150, name="B25")
+    B26 = pp.create_bus(net, vn_kv=15, name="B26")
 
+    # Création Load
+    LOAD_B26 = pp.create_load(net, bus=B26, p_mw=360, q_mvar=180, name="LOAD_B26")
+
+    # Création Shunt
+    C_B25 = pp.create_shunt(net, bus=B25, q_mvar=-75, p_mw=0, name="C_B25")
+    C_B26 = pp.create_shunt(net, bus=B26, q_mvar=-45, p_mw=0, name="C_B26")
+
+    # Création Tansfo
+    TRAFO_B24B25 = pp.create_transformer(net, hv_bus=B24, lv_bus=B25, std_type="_150kV_380kV_type", name="TRAFO_B24B25")
+    TRAFO_B25B26 = pp.create_transformer(net, hv_bus=B25, lv_bus=B26, std_type="_15kV_150kV_type", name="TRAFO_B25B26")
+    
     # Grid 5 - Schupp-------------------------------------------------------------------------------
 
 
