@@ -99,21 +99,38 @@ def My_Amazing_Grid():
     # Grid 1 - Tilmans-------------------------------------------------------------------------------
 
     # Création busses
-    B27 = pp.create_bus(net, vn_kv=380, name="B1")
-    B28 = pp.create_bus(net, vn_kv=380, name="B2")
-    B29 = pp.create_bus(net, vn_kv=20, name="B3")
-    B30 = pp.create_bus(net, vn_kv=380, name="B4")
-    B31 = pp.create_bus(net, vn_kv=380, name="B5")
-    B32 = pp.create_bus(net, vn_kv=380, name="B6")
-    B33 = pp.create_bus(net, vn_kv=380, name="B7")
-    B34 = pp.create_bus(net, vn_kv=380, name="B8")
+    B27 = pp.create_bus(net, vn_kv=380, name="B27")
+    B28 = pp.create_bus(net, vn_kv=380, name="B28")
+    B29 = pp.create_bus(net, vn_kv=20, name="B29")
+    B30 = pp.create_bus(net, vn_kv=380, name="B30")
+    B31 = pp.create_bus(net, vn_kv=380, name="B31")
+    B32 = pp.create_bus(net, vn_kv=380, name="B32")
+    B33 = pp.create_bus(net, vn_kv=380, name="B33")
+    B34 = pp.create_bus(net, vn_kv=380, name="B34")
 
     # Création Load
+    LOAD_B27 = pp.create_load(net, bus=B27, p_mw=200, q_mvar=50, name="LOAD_B27")
+    LOAD_B30 = pp.create_load(net, bus=B30, p_mw=200, q_mvar=50, name="LOAD_B30")
+    LOAD_B32 = pp.create_load(net, bus=B32, p_mw=200, q_mvar=50, name="LOAD_B32")
+    LOAD_B34 = pp.create_load(net, bus=B34, p_mw=200, q_mvar=50, name="LOAD_B34")
+
+    # Création Tansfo
+    TRAFO_B28B29 = pp.create_transformer(net, hv_bus=B28, lv_bus=B29, std_type="_20kV_380kV_type", name="TRAFO_B28B29")
+
+    # Création Gen
+    G_B29 = pp.create_gen(net, bus=B29, p_mw=800, max_q_mvar=575, min_q_mvar=-250, sn_mva=1000, vm_pu=1.09, slack=True ,name="G_B29")
+    G_B31 = pp.create_gen(net, bus=B31, p_mw=210, max_q_mvar=2000, min_q_mvar=-500, sn_mva=1000, vm_pu=1.09, slack=False ,name="G_B31")
+    G_B33 = pp.create_gen(net, bus=B33, p_mw=210, max_q_mvar=2000, min_q_mvar=-500, sn_mva=1000, vm_pu=1.09, slack=False ,name="G_B33")
 
     # Création Lines
+    LINE_B27B28 = pp.create_line(net, from_bus=B27, to_bus=B28, length_km=1, std_type="_380kv_type", name="LINE_B27B28")
+    LINE_B28B30 = pp.create_line(net, from_bus=B28, to_bus=B30, length_km=1, std_type="_380kv_type", name="LINE_B28B30")
+    LINE_B28B34 = pp.create_line(net, from_bus=B28, to_bus=B34, length_km=1, std_type="_380kv_type", name="LINE_B28B34")
+    LINE_B28B32 = pp.create_line(net, from_bus=B28, to_bus=B32, length_km=1, std_type="_380kv_type", name="LINE_B28B32")
+    LINE_B31B32 = pp.create_line(net, from_bus=B31, to_bus=B32, length_km=1, std_type="_380kv_type", name="LINE_B31B32")
+    LINE_B33B34 = pp.create_line(net, from_bus=B33, to_bus=B34, length_km=1, std_type="_380kv_type", name="LINE_B33B34")
 
-    # Création Transfo
-
+    # Création Lines
 
 
     # Grid 2 - Scupp-------------------------------------------------------------------------------
