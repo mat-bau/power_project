@@ -22,18 +22,16 @@ def My_Amazing_Grid():
     # Grid 1 - Tilmans
 
 
-
     # Grid 2 - Scupp
-
 
 
     # Grid 3 - Bauvir
 
 
-    #  Grid 4 - Tilmans
+    # Grid 4 - Tilmans
 
 
-    #   Grid 5 - Schupp
+    # Grid 5 - Schupp
 
 
     return net
