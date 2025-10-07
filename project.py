@@ -237,5 +237,19 @@ def My_Amazing_Grid():
     
     # Grid 5 - Schupp-------------------------------------------------------------------------------
 
+        # Création busses
+    B9 = pp.create_bus(net, vn_kv=380, name="B9")
+    B10 = pp.create_bus(net, vn_kv=150, name="B10")
+    B11 = pp.create_bus(net, vn_kv=15, name="B11")
+
+    # Création Loads
+    LOAD_B11 = pp.create_load(net, bus=B11, p_mw=360, q_mvar=180, name="LOAD_B11")
+
+    # Création Shunts
+    C_B11 = pp.create_shunt(net, bus=B11, q_mvar=45, name="C_B11")
+
+    # Création Transformers
+    TRAFO_B9B10 = pp.create_transformer(net, hv_bus=B9, lv_bus=B10, std_type="_150kV_380kV_type", name="TRAFO_B9B10")
+    TRAFO_B10B11 = pp.create_transformer(net, hv_bus=B10, lv_bus=B11, std_type="_15kV_150kV_type", name="TRAFO_B10B11")
 
     return net
