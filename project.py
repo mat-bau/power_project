@@ -244,5 +244,52 @@ def My_Amazing_Grid():
     
     # Grid 5 - Schupp-------------------------------------------------------------------------------
 
+    # Création busses
+    B9 = pp.create_bus(net, vn_kv=380, name="B9")
+    B10 = pp.create_bus(net, vn_kv=150, name="B10")
+    B11 = pp.create_bus(net, vn_kv=15, name="B11")
+
+    # Création Loads
+    LOAD_B11 = pp.create_load(net, bus=B11, p_mw=360, q_mvar=180, name="LOAD_B11")
+
+    # Création Shunts
+    C_B11 = pp.create_shunt(net, bus=B11, q_mvar=45, name="C_B11")
+
+    # Création Transformers
+    TRAFO_B9B10 = pp.create_transformer(net, hv_bus=B9, lv_bus=B10, std_type="_150kV_380kV_type", name="TRAFO_B9B10")
+    TRAFO_B10B11 = pp.create_transformer(net, hv_bus=B10, lv_bus=B11, std_type="_15kV_150kV_type", name="TRAFO_B10B11")
+
+    # Conncections InterGrids-------------------------------------------------------------------------------
+
+    # Sortie Grid 3
+    LINE_B6B9_1 = pp.create_line(net, from_bus=6, to_bus=9, length_km=1, std_type="_380kv_type", name="LINE_B6B9_1")
+    LINE_B6B9_2 = pp.create_line(net, from_bus=6, to_bus=9, length_km=1, std_type="_380kv_type", name="LINE_B6B9_2")
+
+    LINE_B6B24 = pp.create_line(net, from_bus=6, to_bus=B24, length_km=1, std_type="_380kv_type", name="LINE_B6B24")
+    LINE_B6B17 = pp.create_line(net, from_bus=6, to_bus=17, length_km=1, std_type="_380kv_type", name="LINE_B6B17")
+
+    LINE_B8B16 = pp.create_line(net, from_bus=8, to_bus=16, length_km=1, std_type="_150kv_type", name="LINE_B8B16")
+    LINE_B10B13 = pp.create_line(net, from_bus=10, to_bus=13, length_km=1, std_type="_150kv_type", name="LINE_B10B13")
+    LINE_B13B25 = pp.create_line(net, from_bus=13, to_bus=B25, length_km=1, std_type="_150kv_type", name="LINE_B13B25")
+
+    # Sortie Grid 2
+    LINE_B10B21 = pp.create_line(net, from_bus=10, to_bus=21, length_km=1, std_type="_150kv_type", name="LINE_B10B21")
+    LINE_B21B25 = pp.create_line(net, from_bus=21, to_bus=B25, length_km=1, std_type="_150kv_type", name="LINE_B21B25")
+
+    LINE_B23B24 = pp.create_line(net, from_bus=23, to_bus=B24, length_km=1, std_type="_380kv_type", name="LINE_B23B24")
+
+    # Sortie de Grid 1
+    LINE_B24B27 = pp.create_line(net, from_bus=B24, to_bus=B27, length_km=1, std_type="_380kv_type", name="LINE_B24B27")
+    LINE_B24B30 = pp.create_line(net, from_bus=B24, to_bus=B30, length_km=1, std_type="_380kv_type", name="LINE_B24B30")
+
+    # Sortie Grid 4
+    # Toutes déjà faites
+
+    # Sortie de Grid 5
+    # Toutes déjà faites
+
+
+
+
 
     return net
