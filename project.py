@@ -16,9 +16,25 @@ def My_Amazing_Grid():
     pp.create_std_type(net, {"c_nf_per_km": 150.0, "r_ohm_per_km": 1.4, "x_ohm_per_km": 9, "max_i_ka": 1.35}, name="_150kv_type", element='line')
 
 
-    # Your code goes here
+    # Your code goes he
     # Do not forget to follow the relevant indentation when you submit
     
+
+    # Grid 1 - Tilmans
+
+
+
+    # Grid 2 - Scupp
+
+
+
+    # Grid 3 - Bauvir
+
+
+    #  Grid 4 - Tilmans
+
+
+    #   Grid 5 - Schupp
 
 
     return net
