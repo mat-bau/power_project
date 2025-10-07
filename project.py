@@ -152,10 +152,10 @@ def My_Amazing_Grid():
     LOAD_B22 = pp.create_load(net, bus=B22, p_mw=360, q_mvar=180, name="LOAD_B22")
 
     # Création Shunts
-    C_B18 = pp.create_shunt(net, bus=B18, q_mvar=45, p_mw=0, name="C_B18")
-    C_B19 = pp.create_shunt(net, bus=B19, q_mvar=75, p_mw=0, name="C_B19")
-    C_B21 = pp.create_shunt(net, bus=B21, q_mvar=75, p_mw=0, name="C_B21")
-    C_B22 = pp.create_shunt(net, bus=B22, q_mvar=45, p_mw=0, name="C_B22")
+    C_B18 = pp.create_shunt(net, bus=B18, q_mvar=-45, p_mw=0, name="C_B18")
+    C_B19 = pp.create_shunt(net, bus=B19, q_mvar=-75, p_mw=0, name="C_B19")
+    C_B21 = pp.create_shunt(net, bus=B21, q_mvar=-75, p_mw=0, name="C_B21")
+    C_B22 = pp.create_shunt(net, bus=B22, q_mvar=-45, p_mw=0, name="C_B22")
 
     # Création Transformers
     TRAFO_B15B19 = pp.create_transformer(net, hv_bus=B19, lv_bus=B15, std_type="_20kV_150kV_type", name="TRAFO_B15B19")
@@ -190,32 +190,32 @@ def My_Amazing_Grid():
     LOAD_B16 = pp.create_load(net, B16, p_mw=360, q_mvar=180, name="LOAD_B16")
 
     # Création Shunts
-    C_B3 = pp.create_shunt(net, B3, q_mvar=75, name="C_B3")
-    C_B4 = pp.create_shunt(net, B4, q_mvar=45, name="C_B4")
-    C_B8 = pp.create_shunt(net, B8, q_mvar=75, name="C_B8")
-    C_B14 = pp.create_shunt(net, B14, q_mvar=45, name="C_B14")
-    C_B16 = pp.create_shunt(net, B16, q_mvar=45, name="C_B16")
+    C_B3 = pp.create_shunt(net, B3, q_mvar=-75, name="C_B3")
+    C_B4 = pp.create_shunt(net, B4, q_mvar=-45, name="C_B4")
+    C_B8 = pp.create_shunt(net, B8, q_mvar=-75, name="C_B8")
+    C_B14 = pp.create_shunt(net, B14, q_mvar=-45, name="C_B14")
+    C_B16 = pp.create_shunt(net, B16, q_mvar=-45, name="C_B16")
 
 
 
     # Création Lines
-    LINE_B2B5 = pp.create_line(net, from_bus=B2, to_bus=B5, length_km=1, std_type="_380kV_type", name="LINE_B5B2")
+    LINE_B2B5 = pp.create_line(net, from_bus=B2, to_bus=B5, length_km=1, std_type="_380kv_type", name="LINE_B5B2")
 
-    LINE_B5B6_1 = pp.create_line(net, from_bus=B5, to_bus=B6, length_km=1, std_type="_380kV_type", name="LINE_B5B6_1")
-    LINE_B5B6_2 = pp.create_line(net, from_bus=B5, to_bus=B6, length_km=1, std_type="_380kV_type", name="LINE_B5B6_2")
-    LINE_B5B6_3 = pp.create_line(net, from_bus=B5, to_bus=B6, length_km=1, std_type="_380kV_type", name="LINE_B5B6_3")
+    LINE_B5B6_1 = pp.create_line(net, from_bus=B5, to_bus=B6, length_km=1, std_type="_380kv_type", name="LINE_B5B6_1")
+    LINE_B5B6_2 = pp.create_line(net, from_bus=B5, to_bus=B6, length_km=1, std_type="_380kv_type", name="LINE_B5B6_2")
+    LINE_B5B6_3 = pp.create_line(net, from_bus=B5, to_bus=B6, length_km=1, std_type="_380kv_type", name="LINE_B5B6_3")
 
-    LINE_B8B13 = pp.create_line(net, from_bus=B8, to_bus=B13, length_km=1, std_type="_150kV_type", name="LINE_B8B13")
+    LINE_B8B13 = pp.create_line(net, from_bus=B8, to_bus=B13, length_km=1, std_type="_150kv_type", name="LINE_B8B13")
 
 
     # Création Transfo
 
-    TRAFO_B1B5 = pp.create_transformer(net, hv_bus=B1, lv_bus=B5, std_type="_20kV_380kV_type", name="TRAFO_B1B5")
+    TRAFO_B1B5 = pp.create_transformer(net, hv_bus=B5, lv_bus=B1, std_type="_20kV_380kV_type", name="TRAFO_B1B5")
     TRAFO_B5B7 = pp.create_transformer(net, hv_bus=B5, lv_bus=B7, std_type="_20kV_380kV_type", name="TRAFO_B5B7")
-    TRAFO_B12B13 = pp.create_transformer(net, hv_bus=B12, lv_bus=B13, std_type="_20kV_150kV_type", name="TRAFO_B12B13")
+    TRAFO_B12B13 = pp.create_transformer(net, hv_bus=B13, lv_bus=B12, std_type="_20kV_150kV_type", name="TRAFO_B12B13")
     TRAFO_B13B16 = pp.create_transformer(net, hv_bus=B13, lv_bus=B16, std_type="_15kV_150kV_type", name="TRAFO_B13B16")
-    TRAFO_B8B14 = pp.create_transformer(net, hv_bus=B8, lv_bus=B14, std_type="_15kV_150kV_type", name="TRAFO_B9B14")
-    TRAF_B8B6 = pp.create_transformer(net, hv_bus=B6, lv_bus=B8, std_type="_150kV_380kV_type", name="TRAFO_B8B6")
+    TRAFO_B8B14 = pp.create_transformer(net, hv_bus=B8, lv_bus=B14, std_type="_15kV_150kV_type", name="TRAFO_B8B14")
+    TRAFO_B6B8 = pp.create_transformer(net, hv_bus=B6, lv_bus=B8, std_type="_150kV_380kV_type", name="TRAFO_B6B8")
     TRAFO_B2B3 = pp.create_transformer(net, hv_bus=B2, lv_bus=B3, std_type="_150kV_380kV_type", name="TRAFO_B2B3")
     TRAFO_B3B4 = pp.create_transformer(net, hv_bus=B3, lv_bus=B4, std_type="_15kV_150kV_type", name="TRAFO_B3B4")
 
@@ -253,7 +253,7 @@ def My_Amazing_Grid():
     LOAD_B11 = pp.create_load(net, bus=B11, p_mw=360, q_mvar=180, name="LOAD_B11")
 
     # Création Shunts
-    C_B11 = pp.create_shunt(net, bus=B11, q_mvar=45, name="C_B11")
+    C_B11 = pp.create_shunt(net, bus=B11, q_mvar=-45, name="C_B11")
 
     # Création Transformers
     TRAFO_B9B10 = pp.create_transformer(net, hv_bus=B9, lv_bus=B10, std_type="_150kV_380kV_type", name="TRAFO_B9B10")
@@ -288,6 +288,14 @@ def My_Amazing_Grid():
     # Sortie de Grid 5
     # Toutes déjà faites
 
+    # Control, in a discrete way, the 150kV/15kV transformers
+    ct.DiscreteTapControl(net, element_index=TRAFO_B18B19, vm_lower_pu=1.01, vm_upper_pu=1.021)
+    ct.DiscreteTapControl(net, element_index=TRAFO_B21B22, vm_lower_pu=1.01, vm_upper_pu=1.021)
+    ct.DiscreteTapControl(net, element_index=TRAFO_B13B16, vm_lower_pu=1.01, vm_upper_pu=1.021)
+    ct.DiscreteTapControl(net, element_index=TRAFO_B8B14, vm_lower_pu=1.01, vm_upper_pu=1.021)
+    ct.DiscreteTapControl(net, element_index=TRAFO_B3B4, vm_lower_pu=1.01, vm_upper_pu=1.021)
+    ct.DiscreteTapControl(net, element_index=TRAFO_B25B26, vm_lower_pu=1.01, vm_upper_pu=1.021)
+    ct.DiscreteTapControl(net, element_index=TRAFO_B10B11, vm_lower_pu=1.01, vm_upper_pu=1.021)
 
 
 
