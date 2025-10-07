@@ -130,10 +130,8 @@ def My_Amazing_Grid():
     LINE_B31B32 = pp.create_line(net, from_bus=B31, to_bus=B32, length_km=1, std_type="_380kv_type", name="LINE_B31B32")
     LINE_B33B34 = pp.create_line(net, from_bus=B33, to_bus=B34, length_km=1, std_type="_380kv_type", name="LINE_B33B34")
 
-    # Création Lines
 
-
-    # Grid 2 - Scupp-------------------------------------------------------------------------------
+    # Grid 2 - Schupp -------------------------------------------------------------------------------
 
     # Création busses
     B15 = pp.create_bus(net, vn_kv=20, name="B15")
@@ -219,7 +217,7 @@ def My_Amazing_Grid():
     # Création Transfo
 
 
-    # Grid 4 - Tilmans-------------------------------------------------------------------------------
+    # Grid 4 - Tilmans -------------------------------------------------------------------------------
 
     # Création busses
     B24 = pp.create_bus(net, vn_kv=380, name="B24")
