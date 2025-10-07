@@ -19,8 +19,9 @@ def My_Amazing_Grid():
     # Your code goes he
     # Do not forget to follow the relevant indentation when you submit
 
-    # Grid 1 - Tilmans
+    # Grid 1 - Tilmans-------------------------------------------------------------------------------
 
+    # Création busses
     B27 = pp.create_bus(net, vn_kv=380, name="B1")
     B28 = pp.create_bus(net, vn_kv=380, name="B2")
     B29 = pp.create_bus(net, vn_kv=20, name="B3")
@@ -30,19 +31,25 @@ def My_Amazing_Grid():
     B33 = pp.create_bus(net, vn_kv=380, name="B7")
     B34 = pp.create_bus(net, vn_kv=380, name="B8")
 
+    # Création Load
+
+    # Création Lines
+
+    # Création Transfo
 
 
-    # Grid 2 - Scupp
+
+    # Grid 2 - Scupp-------------------------------------------------------------------------------
 
 
 
-    # Grid 3 - Bauvir
+    # Grid 3 - Bauvir-------------------------------------------------------------------------------
 
 
-    #  Grid 4 - Tilmans
+    #  Grid 4 - Tilmans-------------------------------------------------------------------------------
 
 
-    #   Grid 5 - Schupp
+    #   Grid 5 - Schupp-------------------------------------------------------------------------------
 
 
     return net
