@@ -130,17 +130,94 @@ def My_Amazing_Grid():
     LINE_B31B32 = pp.create_line(net, from_bus=B31, to_bus=B32, length_km=1, std_type="_380kv_type", name="LINE_B31B32")
     LINE_B33B34 = pp.create_line(net, from_bus=B33, to_bus=B34, length_km=1, std_type="_380kv_type", name="LINE_B33B34")
 
+
+    # Grid 2 - Schupp -------------------------------------------------------------------------------
+
+    # Création busses
+    B15 = pp.create_bus(net, vn_kv=20, name="B15")
+    B17 = pp.create_bus(net, vn_kv=380, name="B17")
+    B18 = pp.create_bus(net, vn_kv=15, name="B18")
+    B19 = pp.create_bus(net, vn_kv=150, name="B19")
+    B20 = pp.create_bus(net, vn_kv=20, name="B20")
+    B21 = pp.create_bus(net, vn_kv=150, name="B21")
+    B22 = pp.create_bus(net, vn_kv=15, name="B22")
+    B23 = pp.create_bus(net, vn_kv=380, name="B23")
+
+    # Création Generators
+    G_B15 = pp.create_gen(net, bus=B15, p_mw=300, max_q_mvar=200, min_q_mvar=-50, sn_mva=450, vm_pu=0.98, slack=False, name="G_B15")
+    G_B20 = pp.create_gen(net, bus=B20, p_mw=300, max_q_mvar=200, min_q_mvar=-50, sn_mva=450, vm_pu=0.98, slack=False, name="G_B20")
+
+    # Création Loads
+    LOAD_B18 = pp.create_load(net, bus=B18, p_mw=360, q_mvar=180, name="LOAD_B18")
+    LOAD_B22 = pp.create_load(net, bus=B22, p_mw=360, q_mvar=180, name="LOAD_B22")
+
+    # Création Shunts
+    C_B18 = pp.create_shunt(net, bus=B18, q_mvar=45, p_mw=0, name="C_B18")
+    C_B19 = pp.create_shunt(net, bus=B19, q_mvar=75, p_mw=0, name="C_B19")
+    C_B21 = pp.create_shunt(net, bus=B21, q_mvar=75, p_mw=0, name="C_B21")
+    C_B22 = pp.create_shunt(net, bus=B22, q_mvar=45, p_mw=0, name="C_B22")
+
+    # Création Transformers
+    TRAFO_B15B19 = pp.create_transformer(net, hv_bus=B19, lv_bus=B15, std_type="_20kV_150kV_type", name="TRAFO_B15B19")
+    TRAFO_B17B19 = pp.create_transformer(net, hv_bus=B17, lv_bus=B19, std_type="_150kV_380kV_type", name="TRAFO_B17B19")
+    TRAFO_B18B19 = pp.create_transformer(net, hv_bus=B19, lv_bus=B18, std_type="_15kV_150kV_type", name="TRAFO_B18B19")
+    TRAFO_B20B21 = pp.create_transformer(net, hv_bus=B21, lv_bus=B20, std_type="_20kV_150kV_type", name="TRAFO_B20B21")
+    TRAFO_B21B22 = pp.create_transformer(net, hv_bus=B21, lv_bus=B22, std_type="_15kV_150kV_type", name="TRAFO_B21B22")
+    TRAFO_B21B23 = pp.create_transformer(net, hv_bus=B23, lv_bus=B21, std_type="_150kV_380kV_type", name="TRAFO_B21B23")
+
+
+    # Grid 3 - Bauvir -------------------------------------------------------------------------------
+
+    # Création busses
+    B1 = pp.create_bus(net, vn_kv = 20, name= "B1")
+    B2 = pp.create_bus(net, vn_kv = 20, name= "B2")
+    B3 = pp.create_bus(net, vn_kv = 20, name= "B3")
+    B4 = pp.create_bus(net, vn_kv = 20, name= "B4")
+    B5 = pp.create_bus(net, vn_kv = 20, name= "B5")
+    B6 = pp.create_bus(net, vn_kv = 20, name= "B6")
+    B7 = pp.create_bus(net, vn_kv = 20, name= "B7")
+    B8 = pp.create_bus(net, vn_kv = 20, name= "B8")
+    B9 = pp.create_bus(net, vn_kv = 20, name= "B9")
+    B10 = pp.create_bus(net, vn_kv = 20, name= "B10")
+    B11 = pp.create_bus(net, vn_kv = 20, name= "B11")
+    B12 = pp.create_bus(net, vn_kv = 20, name= "B12")
+    B13 = pp.create_bus(net, vn_kv = 20, name= "B13")
+    B14 = pp.create_bus(net, vn_kv = 20, name= "B14")
+    B16 = pp.create_bus(net, vn_kv = 20, name= "B16")
+
+    # Création Loads
+    LOAD_B1 = pp.create_load(net, B1, p_mw=50, q_mvar=40, name="LOAD_B1")
+    LOAD_B4 = pp.create_load(net, B4, p_mw=360, q_mvar=180, name="LOAD_B4")
+    LOAD_B7 = pp.create_load(net, B7, p_mw=50, q_mvar=40, name="LOAD_B7")
+    LOAD_B11 = pp.create_load(net, B11, p_mw=360, q_mvar=180, name="LOAD_B11")
+    LOAD_B14 = pp.create_load(net, B14, p_mw=360, q_mvar=180, name="LOAD_B14")
+    LOAD_B16 = pp.create_load(net, B16, p_mw=360, q_mvar=180, name="LOAD_B16")
+
+    # Création Shunts
+    C_B4 = pp.create_shunt(net, B4, q_mvar=45, name="C_B4")
+    C_B11 = pp.create_shunt(net, B11, q_mvar=45, name="C_B11")
+    C_B14 = pp.create_shunt(net, B14, q_mvar=45, name="C_B14")
+    C_B16 = pp.create_shunt(net, B16, q_mvar=45, name="C_B16")
+
+
+
     # Création Lines
+    LINE_B2B5 = pp.create_line(net, from_bus=B2, to_bus=B5, length_km=1, std_type="_380kV_type", name="LINE_B5B2")
+
+    LINE_B5B6 = pp.create_line(net, from_bus=B5, to_bus=B6, length_km=1, std_type="_20kV_150kV_type", name="LINE_B5B6")
+    LINE_B5B6 = pp.create_line(net, from_bus=B5, to_bus=B6, length_km=1, std_type="_20kV_150kV_type", name="LINE_B5B6")
+    LINE_B6B9 = pp.create_line(net, from_bus=B6, to_bus=B9, length_km=1, std_type="_20kV_150kV_type", name="LINE_B6B9")
+    LINE_B8B13 = pp.create_line(net, from_bus=B8, to_bus=B13, length_km=1, std_type="_20kV_150kV_type", name="LINE_B8B13")
+    #LINE_B6B24 = pp.create_line(net, from_bus=B6, to_bus=B24, length_km=1, std_type="_20kV_150kV_type", name="LINE_B6B24")
+    #LINE_B6B17 = pp.create_line(net, from_bus=B6, to_bus=B17, length_km=1, std_type="_20kV_150kV_type", name="LINE_B6B17")
+    #LINE_B8B19 = pp.create_line(net, from_bus=B8, to_bus=B19, length_km=1, std_type="_20kV_150kV_type", name="LINE_B8B19")
+    #LINE_B13B25 = pp.create_line(net, from_bus=B13, to_bus=B25, length_km=1, std_type="_20kV_150kV_type", name="LINE_B13B25")
+    LINE_B10B13 = pp.create_line(net, from_bus=B10, to_bus=B13, length_km=1, std_type="_20kV_150kV_type", name="LINE_B10B13")
+
+    # Création Transfo
 
 
-    # Grid 2 - Scupp-------------------------------------------------------------------------------
-
-
-
-    # Grid 3 - Bauvir-------------------------------------------------------------------------------
-
-
-    # Grid 4 - Tilmans-------------------------------------------------------------------------------
+    # Grid 4 - Tilmans -------------------------------------------------------------------------------
 
     # Création busses
     B24 = pp.create_bus(net, vn_kv=380, name="B24")
@@ -160,6 +237,20 @@ def My_Amazing_Grid():
     
     # Grid 5 - Schupp-------------------------------------------------------------------------------
 
+    # Création busses
+    B9 = pp.create_bus(net, vn_kv=380, name="B9")
+    B10 = pp.create_bus(net, vn_kv=150, name="B10")
+    B11 = pp.create_bus(net, vn_kv=15, name="B11")
+
+    # Création Loads
+    LOAD_B11 = pp.create_load(net, bus=B11, p_mw=360, q_mvar=180, name="LOAD_B11")
+
+    # Création Shunts
+    C_B11 = pp.create_shunt(net, bus=B11, q_mvar=45, name="C_B11")
+
+    # Création Transformers
+    TRAFO_B9B10 = pp.create_transformer(net, hv_bus=B9, lv_bus=B10, std_type="_150kV_380kV_type", name="TRAFO_B9B10")
+    TRAFO_B10B11 = pp.create_transformer(net, hv_bus=B10, lv_bus=B11, std_type="_15kV_150kV_type", name="TRAFO_B10B11")
 
     # Conncections InterGrids-------------------------------------------------------------------------------
 
