@@ -237,7 +237,7 @@ def My_Amazing_Grid():
     
     # Grid 5 - Schupp-------------------------------------------------------------------------------
 
-        # Création busses
+    # Création busses
     B9 = pp.create_bus(net, vn_kv=380, name="B9")
     B10 = pp.create_bus(net, vn_kv=150, name="B10")
     B11 = pp.create_bus(net, vn_kv=15, name="B11")
