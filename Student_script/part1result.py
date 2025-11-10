@@ -159,3 +159,24 @@ Launch the Power Flow routine here
 Display the results you need
 
 """
+
+# Run power flow
+pp.runpp(net, algorithm='nr', calculate_voltage_angles=True)
+
+# Display results
+print("\n=== Power Flow Results ===")
+print(f"\nConverged: {net.converged}")
+if net.converged:
+    print("\nBus Voltages (pu):")
+    print(net.res_bus[['vm_pu', 'va_degree']])
+    print("\nLine Loading (%):")
+    # Include line name and bus connections for identification
+    line_results = net.res_line[['loading_percent', 'p_from_mw', 'q_from_mvar']].copy()
+    line_results.insert(0, 'name', net.line['name'].values)
+    line_results.insert(1, 'from_bus', net.line['from_bus'].map(net.bus['name']).values)
+    line_results.insert(2, 'to_bus', net.line['to_bus'].map(net.bus['name']).values)
+    print(line_results)
+    print("\nGenerator Results:")
+    print(net.res_gen[['p_mw', 'q_mvar', 'vm_pu']])
+else:
+    print("Power flow did not converge!")
