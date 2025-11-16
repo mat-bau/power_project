@@ -180,3 +180,104 @@ if net.converged:
     print(net.res_gen[['p_mw', 'q_mvar', 'vm_pu']])
 else:
     print("Power flow did not converge!")
+
+line_idx = net.line[(net.line['from_bus'] == N1) & (net.line['to_bus'] == N4)].index[0]
+from_bus = net.line.at[line_idx, 'from_bus']
+to_bus = net.line.at[line_idx, 'to_bus']
+
+# Tensions et angles (résultats du load flow)
+V_from_pu = net.res_bus.at[from_bus, 'vm_pu']  # en p.u.
+V_to_pu = net.res_bus.at[to_bus, 'vm_pu']
+theta_from = np.deg2rad(net.res_bus.at[from_bus, 'va_degree'])
+theta_to = np.deg2rad(net.res_bus.at[to_bus, 'va_degree'])
+
+vn_kv = net.bus.at[from_bus, 'vn_kv']
+length = net.line.at[line_idx, 'length_km']
+r_ohm_per_km = net.line.at[line_idx, 'r_ohm_per_km']
+x_ohm_per_km = net.line.at[line_idx, 'x_ohm_per_km']
+c_nf_per_km = net.line.at[line_idx, 'c_nf_per_km']
+
+# Impédance série totale de la ligne (en Ohms)
+omega = 2 * np.pi * 50.0
+r = r_ohm_per_km * length
+x = x_ohm_per_km * length
+Z_ohm = r + 1j * x
+
+C_total = c_nf_per_km * 1e-9 * length  # Capacité totale en Farads
+Ysh_siemens = 1j * omega * C_total 
+
+# Base du système
+Sbase_MVA = net.sn_mva  
+Vbase_kV = vn_kv  # 380 kV (tension ligne-ligne)
+Zbase = (Vbase_kV**2) / Sbase_MVA
+Ybase = 1 / Zbase  
+
+# Conversion des impédances en p.u.
+Z_pu = Z_ohm / Zbase
+Ysh_pu = Ysh_siemens / Ybase
+
+# Tensions en p.u.
+Vf_pu = V_from_pu * np.exp(1j * theta_from) # il faut passer l'angle pcq la tension reelle seul ne suffit pas 
+Vt_pu = V_to_pu * np.exp(1j * theta_to)
+
+# Courant série en p.u.
+I_series_pu = (Vf_pu - Vt_pu) / Z_pu
+
+# Courant shunt côté 'from' en p.u.
+I_sh_from_pu = 0.5 * Ysh_pu * Vf_pu
+
+# Courant total côté'from' en p.u.
+I_from_pu = I_series_pu + I_sh_from_pu
+
+# Puissance complexe côté 'from' en p.u.
+S_from_pu = Vf_pu * np.conj(I_from_pu)
+
+# Conversion en MW et MVAr
+P_from_calc = S_from_pu.real * Sbase_MVA  # MW
+Q_from_calc = S_from_pu.imag * Sbase_MVA  # MVAr
+
+# Comparaison avec pandapower
+P_from_pp = net.res_line.at[line_idx, 'p_from_mw']
+Q_from_pp = net.res_line.at[line_idx, 'q_from_mvar']
+
+print(f"\n=== Ligne {net.line.at[line_idx, 'name']} ===")
+print(f"\n--- Paramètres de base ---")
+print(f"Sbase: {Sbase_MVA} MVA")
+print(f"Vbase: {Vbase_kV} kV (ligne-ligne)")
+print(f"Zbase: {Zbase:.3f} Ω")
+print(f"Ybase: {Ybase:.6f} S")
+
+print(f"\n--- Impédances de ligne ---")
+print(f"Z (Ohms):  {abs(Z_ohm):.3f} ∠ {np.rad2deg(np.angle(Z_ohm)):.3f}°")
+print(f"Z (p.u.):  {abs(Z_pu):.6f} ∠ {np.rad2deg(np.angle(Z_pu)):.3f}°")
+print(f"Ysh (Siemens): {abs(Ysh_siemens):.6e} ∠ {np.rad2deg(np.angle(Ysh_siemens)):.3f}°")
+print(f"Ysh (p.u.):    {abs(Ysh_pu):.6f} ∠ {np.rad2deg(np.angle(Ysh_pu)):.3f}°")
+
+print(f"\n--- Tensions ---")
+print(f"V_from: {V_from_pu:.5f} ∠ {np.rad2deg(theta_from):.3f}° p.u.")
+print(f"V_to:   {V_to_pu:.5f} ∠ {np.rad2deg(theta_to):.3f}° p.u.")
+
+print(f"\n--- Courants en p.u. ---")
+print(f"I_series: {abs(I_series_pu):.5f} ∠ {np.rad2deg(np.angle(I_series_pu)):.3f}° p.u.")
+print(f"I_shunt:  {abs(I_sh_from_pu):.5f} ∠ {np.rad2deg(np.angle(I_sh_from_pu)):.3f}° p.u.")
+print(f"I_total:  {abs(I_from_pu):.5f} ∠ {np.rad2deg(np.angle(I_from_pu)):.3f}° p.u.")
+
+print(f"\n--- Puissances")
+print(f"P_from (calcul manuel): {P_from_calc:.3f} MW")
+print(f"P_from (pandapower):    {P_from_pp:.3f} MW")
+print(f"Erreur P: {abs(P_from_calc - P_from_pp):.3f} MW ({abs(P_from_calc - P_from_pp)/abs(P_from_pp)*100:.2f}%)")
+
+print(f"\nQ_from (calcul manuel): {Q_from_calc:.3f} MVAr")
+print(f"Q_from (pandapower):    {Q_from_pp:.3f} MVAr")
+print(f"Erreur Q: {abs(Q_from_calc - Q_from_pp):.3f} MVAr ({abs(Q_from_calc - Q_from_pp)/abs(Q_from_pp)*100:.2f}%)")
+
+# Vérification du courant en kA
+Ibase = (Sbase_MVA * 1000) / (np.sqrt(3) * Vbase_kV)  # Courant de base en A
+I_from_ka_calc = abs(I_from_pu) * Ibase / 1000  # en kA
+I_from_ka_pp = net.res_line.at[line_idx, 'i_from_ka']
+
+print(f"\n--- Vérification du courant ---")
+print(f"Ibase: {Ibase:.3f} A")
+print(f"I_from (calcul): {I_from_ka_calc:.4f} kA")
+print(f"I_from (pandapower): {I_from_ka_pp:.4f} kA")
+print(f"Erreur I: {abs(I_from_ka_calc - I_from_ka_pp):.6f} kA")
