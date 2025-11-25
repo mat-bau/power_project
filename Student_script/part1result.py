@@ -281,3 +281,639 @@ print(f"Ibase: {Ibase:.3f} A")
 print(f"I_from (calcul): {I_from_ka_calc:.4f} kA")
 print(f"I_from (pandapower): {I_from_ka_pp:.4f} kA")
 print(f"Erreur I: {abs(I_from_ka_calc - I_from_ka_pp):.6f} kA")
+
+# ============================
+#        Q1.2 : Bilan
+# ============================
+
+# Courant série côté "to" (p.u.)
+I_series_to_pu = (Vt_pu - Vf_pu) / Z_pu
+
+# Courant shunt côté "to" (p.u.)
+I_sh_to_pu = 0.5 * Ysh_pu * Vt_pu
+
+# Courant total côté "to"
+I_to_pu = I_series_to_pu + I_sh_to_pu
+
+# Puissance complexe côté "to" (p.u.)
+S_to_pu = Vt_pu * np.conj(I_to_pu)
+
+# Conversion en MW et MVAr
+P_to_calc = S_to_pu.real * Sbase_MVA
+Q_to_calc = S_to_pu.imag * Sbase_MVA
+
+# Pertes
+P_loss_calc = P_from_calc - P_to_calc
+Q_loss_calc = Q_from_calc - Q_to_calc
+
+# Comparaison avec pandapower
+P_to_pp = net.res_line.at[line_idx, 'p_to_mw']
+Q_to_pp = net.res_line.at[line_idx, 'q_to_mvar']
+P_loss_pp = net.res_line.at[line_idx, 'pl_mw']     # pertes actives pandapower
+
+print("\n=== Q1.2 : Bilan de puissance ===")
+print(f"P_to (calcul): {P_to_calc:.4f} MW")
+print(f"P_to (pandapower): {P_to_pp:.4f} MW\n")
+
+print(f"Q_to (calcul): {Q_to_calc:.4f} MVAr")
+print(f"Q_to (pandapower): {Q_to_pp:.4f} MVAr\n")
+
+print(f"Pertes P (calcul): {P_loss_calc:.6f} MW")
+print(f"Pertes P (pandapower): {P_loss_pp:.6f} MW\n")
+
+print(f"Pertes Q (calcul): {Q_loss_calc:.6f} MVAr")
+
+import numpy as np
+
+# ========================================
+# Calcul côté 'from' (déjà fait en Q1.1)
+# ========================================
+
+line_idx = net.line[(net.line['from_bus'] == N1) & 
+                    (net.line['to_bus'] == N4)].index[0]
+
+from_bus = net.line.at[line_idx, 'from_bus']
+to_bus = net.line.at[line_idx, 'to_bus']
+
+# Tensions complexes
+V_from_pu = net.res_bus.at[from_bus, 'vm_pu']
+V_to_pu = net.res_bus.at[to_bus, 'vm_pu']
+theta_from = np.deg2rad(net.res_bus.at[from_bus, 'va_degree'])
+theta_to = np.deg2rad(net.res_bus.at[to_bus, 'va_degree'])
+
+# Paramètres de ligne
+vn_kv = net.bus.at[from_bus, 'vn_kv']
+length = net.line.at[line_idx, 'length_km']
+r = net.line.at[line_idx, 'r_ohm_per_km'] * length
+x = net.line.at[line_idx, 'x_ohm_per_km'] * length
+c = net.line.at[line_idx, 'c_nf_per_km'] * length
+
+# Bases
+Sbase_MVA = net.sn_mva
+Vbase_kV = vn_kv
+Zbase = Vbase_kV**2 / Sbase_MVA
+Ybase = 1 / Zbase
+
+# Conversion en p.u.
+Z_pu = (r + 1j * x) / Zbase
+omega = 2 * np.pi * 50
+Ysh_pu = (1j * omega * c * 1e-9) / Ybase
+
+# Phaseurs
+Vf_pu = V_from_pu * np.exp(1j * theta_from)
+Vt_pu = V_to_pu * np.exp(1j * theta_to)
+
+# Courants côté 'from'
+I_series_pu = (Vf_pu - Vt_pu) / Z_pu
+I_sh_from_pu = 0.5 * Ysh_pu * Vf_pu
+I_from_pu = I_series_pu + I_sh_from_pu
+
+# Puissance côté 'from'
+S_from_pu = Vf_pu * np.conj(I_from_pu)
+P_from_calc = S_from_pu.real * Sbase_MVA
+Q_from_calc = S_from_pu.imag * Sbase_MVA
+
+# ========================================
+# Calcul côté 'to' (NOUVEAU)
+# ========================================
+
+# Courant série (même que côté from, mais sens inverse pour la convention)
+# Le courant série circule de from vers to
+I_series_pu_to = I_series_pu  # Même courant physique
+
+# Courant shunt côté 'to'
+I_sh_to_pu = 0.5 * Ysh_pu * Vt_pu
+
+# Courant total côté 'to'
+# Convention: courant SORTANT de la ligne vers le bus 'to'
+# Dans le modèle π, le courant entrant au bus 'to' est:
+I_to_pu = I_series_pu - I_sh_to_pu  # Le shunt est en parallèle, donc soustrait
+
+# Puissance côté 'to'
+# Convention: puissance ENTRANT dans le bus 'to' (sortant de la ligne)
+# Donc le signe est inversé par rapport au flux physique
+S_to_pu = Vt_pu * np.conj(I_to_pu)
+P_to_calc = -S_to_pu.real * Sbase_MVA  # Négatif car convention inverse
+Q_to_calc = -S_to_pu.imag * Sbase_MVA
+
+# ========================================
+# Bilan de puissance (PERTES)
+# ========================================
+
+# Pertes actives
+Delta_P_calc = P_from_calc + P_to_calc  # ✅ SOMME ALGÉBRIQUE
+
+# Pertes/Génération réactives
+Delta_Q_calc = Q_from_calc + Q_to_calc  # ✅ SOMME ALGÉBRIQUE
+
+# ========================================
+# Comparaison avec pandapower
+# ========================================
+
+P_from_pp = net.res_line.at[line_idx, 'p_from_mw']
+Q_from_pp = net.res_line.at[line_idx, 'q_from_mvar']
+P_to_pp = net.res_line.at[line_idx, 'p_to_mw']
+Q_to_pp = net.res_line.at[line_idx, 'q_to_mvar']
+
+Delta_P_pp = P_from_pp + P_to_pp
+Delta_Q_pp = Q_from_pp + Q_to_pp
+
+# ========================================
+# Affichage des résultats
+# ========================================
+
+print(f"\n{'='*60}")
+print(f"Q1.2 : BILAN DE PUISSANCE LIGNE N1-N4")
+print(f"{'='*60}")
+
+print(f"\n--- Puissances côté 'from' (N1) ---")
+print(f"P_from (calcul):     {P_from_calc:>10.4f} MW")
+print(f"P_from (pandapower): {P_from_pp:>10.4f} MW")
+print(f"Q_from (calcul):     {Q_from_calc:>10.4f} MVAr")
+print(f"Q_from (pandapower): {Q_from_pp:>10.4f} MVAr")
+
+print(f"\n--- Puissances côté 'to' (N4) ---")
+print(f"P_to (calcul):       {P_to_calc:>10.4f} MW")
+print(f"P_to (pandapower):   {P_to_pp:>10.4f} MW")
+print(f"Q_to (calcul):       {Q_to_calc:>10.4f} MVAr")
+print(f"Q_to (pandapower):   {Q_to_pp:>10.4f} MVAr")
+
+print(f"\n--- Bilan (Pertes) ---")
+print(f"ΔP (calcul):         {Delta_P_calc:>10.4f} MW")
+print(f"ΔP (pandapower):     {Delta_P_pp:>10.4f} MW")
+print(f"Erreur:              {abs(Delta_P_calc - Delta_P_pp):>10.4f} MW")
+
+print(f"\nΔQ (calcul):         {Delta_Q_calc:>10.4f} MVAr")
+print(f"ΔQ (pandapower):     {Delta_Q_pp:>10.4f} MVAr")
+print(f"Erreur:              {abs(Delta_Q_calc - Delta_Q_pp):>10.4f} MVAr")
+
+print(f"\n--- Interprétation ---")
+if Delta_P_calc > 0:
+    print(f"✓ Pertes actives: {Delta_P_calc:.4f} MW (effet Joule)")
+else:
+    print(f"⚠ Gain actif impossible: {Delta_P_calc:.4f} MW")
+
+if Delta_Q_calc > 0:
+    print(f"✓ Génération réactive nette: {Delta_Q_calc:.4f} MVAr (effet capacitif)")
+elif Delta_Q_calc < 0:
+    print(f"✓ Consommation réactive nette: {abs(Delta_Q_calc):.4f} MVAr (effet inductif)")
+else:
+    print(f"✓ Pas de pertes/génération réactive nette")
+
+print(f"\n--- Vérification physique ---")
+# Les pertes Joule théoriques
+I_rms_pu = abs(I_series_pu)
+R_pu = Z_pu.real
+P_joule_calc = I_rms_pu**2 * R_pu * Sbase_MVA
+print(f"Pertes Joule théoriques (I²R): {P_joule_calc:.4f} MW")
+print(f"Cohérence: {abs(P_joule_calc - Delta_P_calc) < 0.01}")
+
+import numpy as np
+
+# ========================================
+# DONNÉES DE LA LIGNE
+# ========================================
+
+line_idx = net.line[(net.line['from_bus'] == N1) & 
+                    (net.line['to_bus'] == N4)].index[0]
+
+# Paramètres par km
+r_per_km = net.line.at[line_idx, 'r_ohm_per_km']  # Ω/km
+x_per_km = net.line.at[line_idx, 'x_ohm_per_km']  # Ω/km
+c_per_km = net.line.at[line_idx, 'c_nf_per_km']   # nF/km
+length_km = net.line.at[line_idx, 'length_km']    # km
+
+# Tension nominale (ligne-ligne)
+Vn_kV = net.bus.at[net.line.at[line_idx, 'from_bus'], 'vn_kv']  # 380 kV
+
+# Fréquence
+f = net.f_hz  # 50 Hz
+omega = 2 * np.pi * f
+
+print(f"\n{'='*60}")
+print(f"Q1.3 : SURGE IMPEDANCE LOADING (SIL)")
+print(f"{'='*60}")
+
+# ========================================
+# CALCUL DE L'IMPÉDANCE CARACTÉRISTIQUE Zc
+# ========================================
+
+# Impédance série par km (complexe)
+z_per_km = r_per_km + 1j * x_per_km  # Ω/km
+
+# Admittance shunt par km (complexe)
+# y_per_km = G + j*ω*C, avec G ≈ 0 (pas de conductance)
+C_per_km_F = c_per_km * 1e-9  # Conversion nF → F
+y_per_km = 1j * omega * C_per_km_F  # S/km
+
+# Impédance caractéristique (complex)
+Zc = np.sqrt(z_per_km / y_per_km)  # Ω
+
+print(f"\n--- Paramètres de ligne (par km) ---")
+print(f"z (série):   {abs(z_per_km):.3f} ∠ {np.angle(z_per_km, deg=True):.2f}° Ω/km")
+print(f"y (shunt):   {abs(y_per_km):.6e} ∠ {np.angle(y_per_km, deg=True):.2f}° S/km")
+print(f"\n--- Impédance caractéristique ---")
+print(f"Zc = {abs(Zc):.2f} ∠ {np.angle(Zc, deg=True):.2f}° Ω")
+
+# ========================================
+# CALCUL DU SURGE IMPEDANCE LOADING (SIL)
+# ========================================
+
+# Formule du SIL (triphasé, tension ligne-ligne)
+SIL_MW = (Vn_kV**2) / abs(Zc)  # MW
+
+print(f"\n--- Surge Impedance Loading (SIL) ---")
+print(f"Vn = {Vn_kV} kV (ligne-ligne)")
+print(f"SIL = Vn² / |Zc| = {Vn_kV}² / {abs(Zc):.2f}")
+print(f"SIL = {SIL_MW:.2f} MW")
+
+# ========================================
+# PUISSANCE ACTUELLE DANS LA LIGNE
+# ========================================
+
+# Puissance apparente transmise (côté from)
+P_from = net.res_line.at[line_idx, 'p_from_mw']
+Q_from = net.res_line.at[line_idx, 'q_from_mvar']
+S_from = np.sqrt(P_from**2 + Q_from**2)
+
+# Taux de charge par rapport au SIL
+loading_SIL = (S_from / SIL_MW) * 100
+
+print(f"\n--- Charge actuelle de la ligne ---")
+print(f"P_from = {P_from:.2f} MW")
+print(f"Q_from = {Q_from:.2f} MVAr")
+print(f"S_from = {S_from:.2f} MVA")
+print(f"\nLoading par rapport au SIL : {loading_SIL:.1f}%")
+
+# ========================================
+# INTERPRÉTATION
+# ========================================
+
+print(f"\n--- Interprétation ---")
+if loading_SIL < 100:
+    print(f"✓ La ligne opère en dessous de son SIL ({loading_SIL:.1f}%)")
+    print(f"  → Comportement inductif dominant")
+    print(f"  → Consommation de puissance réactive")
+elif loading_SIL > 100:
+    print(f"⚠ La ligne opère au-dessus de son SIL ({loading_SIL:.1f}%)")
+    print(f"  → Comportement capacitif dominant")
+    print(f"  → Génération de puissance réactive")
+else:
+    print(f"✓ La ligne opère exactement à son SIL")
+    print(f"  → Équilibre parfait entre effets inductif et capacitif")
+
+# ========================================
+# VÉRIFICATION ALTERNATIVE
+# ========================================
+
+# Calcul de Zc à partir de L et C
+L_per_km_H = x_per_km / omega  # Inductance par km (H/km)
+C_per_km_F = c_per_km * 1e-9   # Capacité par km (F/km)
+
+Zc_alternative = np.sqrt(L_per_km_H / C_per_km_F)
+
+print(f"\n--- Vérification ---")
+print(f"L = {L_per_km_H:.6f} H/km")
+print(f"C = {C_per_km_F:.9f} F/km")
+print(f"Zc (√(L/C)) = {Zc_alternative:.2f} Ω")
+print(f"Écart avec calcul direct : {abs(abs(Zc) - Zc_alternative):.4f} Ω")
+
+# ========================================
+# COMPARAISON MODULE vs MAGNITUDE
+# ========================================
+
+print(f"\n--- Analyse de Zc ---")
+print(f"|Zc| (magnitude) = {abs(Zc):.2f} Ω")
+print(f"Re(Zc) = {Zc.real:.2f} Ω")
+print(f"Im(Zc) = {Zc.imag:.2f} Ω")
+print(f"φ(Zc) = {np.angle(Zc, deg=True):.2f}°")
+
+if abs(np.angle(Zc, deg=True)) < 5:
+    print("→ Zc est quasi-réel (ligne avec faibles pertes)")
+else:
+    print("→ Zc a une composante imaginaire significative")
+
+import numpy as np
+
+# ========================================
+# Q1.4 : COURANT DANS LA LIGNE ET COMPARAISON
+# ========================================
+
+line_idx = net.line[(net.line['from_bus'] == N1) & 
+                    (net.line['to_bus'] == N4)].index[0]
+
+print(f"\n{'='*60}")
+print(f"Q1.4 : COURANT DANS LA LIGNE N1-N4")
+print(f"{'='*60}")
+
+# ========================================
+# MÉTHODE 1 : Extraction directe depuis pandapower
+# ========================================
+
+# Courant calculé par pandapower (côté 'from')
+I_from_ka_pp = net.res_line.at[line_idx, 'i_from_ka']
+
+# Courant maximal de la ligne
+I_max_ka = net.line.at[line_idx, 'max_i_ka']
+
+# Taux de charge (loading)
+loading_percent_pp = net.res_line.at[line_idx, 'loading_percent']
+
+print(f"\n--- Résultats pandapower ---")
+print(f"I_from = {I_from_ka_pp:.4f} kA")
+print(f"I_max  = {I_max_ka:.4f} kA")
+print(f"Loading = {loading_percent_pp:.2f}%")
+
+# ========================================
+# MÉTHODE 2 : Calcul manuel du courant
+# ========================================
+
+from_bus = net.line.at[line_idx, 'from_bus']
+to_bus = net.line.at[line_idx, 'to_bus']
+
+# Tensions
+V_from_pu = net.res_bus.at[from_bus, 'vm_pu']
+V_to_pu = net.res_bus.at[to_bus, 'vm_pu']
+theta_from = np.deg2rad(net.res_bus.at[from_bus, 'va_degree'])
+theta_to = np.deg2rad(net.res_bus.at[to_bus, 'va_degree'])
+
+# Paramètres de ligne
+vn_kv = net.bus.at[from_bus, 'vn_kv']
+length = net.line.at[line_idx, 'length_km']
+r = net.line.at[line_idx, 'r_ohm_per_km'] * length
+x = net.line.at[line_idx, 'x_ohm_per_km'] * length
+c = net.line.at[line_idx, 'c_nf_per_km'] * length
+
+# Bases
+Sbase_MVA = net.sn_mva
+Zbase = vn_kv**2 / Sbase_MVA
+Ybase = 1 / Zbase
+
+# Conversion en p.u.
+Z_pu = (r + 1j * x) / Zbase
+omega = 2 * np.pi * 50
+Ysh_pu = (1j * omega * c * 1e-9) / Ybase
+
+# Phaseurs
+Vf_pu = V_from_pu * np.exp(1j * theta_from)
+Vt_pu = V_to_pu * np.exp(1j * theta_to)
+
+# Courants en p.u.
+I_series_pu = (Vf_pu - Vt_pu) / Z_pu
+I_sh_from_pu = 0.5 * Ysh_pu * Vf_pu
+I_from_pu = I_series_pu + I_sh_from_pu
+
+# Courant de base
+I_base = (Sbase_MVA * 1000) / (np.sqrt(3) * vn_kv)  # en A
+
+# Conversion en kA
+I_from_ka_calc = abs(I_from_pu) * I_base / 1000
+
+print(f"\n--- Calcul manuel ---")
+print(f"I_base = {I_base:.2f} A")
+print(f"I_from (p.u.) = {abs(I_from_pu):.5f} ∠ {np.angle(I_from_pu, deg=True):.2f}°")
+print(f"I_from (calcul) = {I_from_ka_calc:.4f} kA")
+print(f"Erreur avec pandapower = {abs(I_from_ka_calc - I_from_ka_pp):.6f} kA")
+
+# ========================================
+# MÉTHODE 3 : Calcul direct à partir de S et V
+# ========================================
+
+# Puissance apparente côté 'from'
+P_from = net.res_line.at[line_idx, 'p_from_mw']
+Q_from = net.res_line.at[line_idx, 'q_from_mvar']
+S_from = np.sqrt(P_from**2 + Q_from**2)
+
+# Tension ligne-ligne au bus 'from' (en kV)
+V_from_kV = V_from_pu * vn_kv
+
+# Courant triphasé
+I_from_ka_S = S_from / (np.sqrt(3) * V_from_kV)
+
+print(f"\n--- Vérification via S et V ---")
+print(f"S_from = {S_from:.2f} MVA")
+print(f"V_from = {V_from_kV:.2f} kV (ligne-ligne)")
+print(f"I_from = S/(√3·V) = {S_from:.2f}/(√3·{V_from_kV:.2f}) = {I_from_ka_S:.4f} kA")
+
+# ========================================
+# COMPARAISON AU COURANT NOMINAL
+# ========================================
+
+# Taux de charge manuel
+loading_percent_calc = (I_from_ka_calc / I_max_ka) * 100
+
+print(f"\n--- Comparaison au courant nominal ---")
+print(f"I_from / I_max = {I_from_ka_calc:.4f} / {I_max_ka:.4f} = {loading_percent_calc:.2f}%")
+
+if loading_percent_calc < 100:
+    print(f"✓ La ligne est exploitée en sécurité ({loading_percent_calc:.1f}% de charge)")
+elif loading_percent_calc < 110:
+    print(f"⚠ La ligne est proche de sa limite ({loading_percent_calc:.1f}% de charge)")
+else:
+    print(f"❌ SURCHARGE ! La ligne dépasse sa capacité ({loading_percent_calc:.1f}% de charge)")
+
+# ========================================
+# CALCUL DU COURANT NOMINAL THÉORIQUE
+# ========================================
+
+# Le courant max peut être vérifié avec la puissance nominale
+# Pour une ligne, I_max dépend de la limite thermique
+# Souvent, max_i_ka est fixé directement ou calculé via des normes
+
+print(f"\n--- Informations complémentaires ---")
+print(f"Puissance nominale (si basée sur I_max) :")
+S_nominal_MVA = np.sqrt(3) * vn_kv * I_max_ka
+print(f"S_nominal = √3 · V_n · I_max = √3 · {vn_kv} · {I_max_ka:.4f}")
+print(f"S_nominal = {S_nominal_MVA:.2f} MVA")
+
+# Facteur de puissance actuel
+pf_from = P_from / S_from
+print(f"\nFacteur de puissance actuel : {pf_from:.4f}")
+print(f"Angle φ = {np.rad2deg(np.arccos(pf_from)):.2f}°")
+
+# ========================================
+# TABLEAU RÉCAPITULATIF
+# ========================================
+
+print(f"\n{'='*60}")
+print(f"RÉCAPITULATIF")
+print(f"{'='*60}")
+print(f"{'Grandeur':<30} {'Valeur':>15} {'Unité':>10}")
+print(f"{'-'*60}")
+print(f"{'Courant from (pandapower)':<30} {I_from_ka_pp:>15.4f} {'kA':>10}")
+print(f"{'Courant from (calcul p.u.)':<30} {I_from_ka_calc:>15.4f} {'kA':>10}")
+print(f"{'Courant from (via S/V)':<30} {I_from_ka_S:>15.4f} {'kA':>10}")
+print(f"{'Courant maximal':<30} {I_max_ka:>15.4f} {'kA':>10}")
+print(f"{'Taux de charge':<30} {loading_percent_calc:>15.2f} {'%':>10}")
+print(f"{'Puissance apparente':<30} {S_from:>15.2f} {'MVA':>10}")
+print(f"{'Puissance nominale (théorique)':<30} {S_nominal_MVA:>15.2f} {'MVA':>10}")
+print(f"{'='*60}")
+
+# trouver l'indice du transfo Nc-Nd
+trafo_idx = 0  # adapter
+P_from_trafo_MW = net.res_trafo.at[trafo_idx, 'p_hv_mw']  # HV side
+Q_from_trafo_MVAr = net.res_trafo.at[trafo_idx, 'q_hv_mvar']
+P_to_trafo_MW = net.res_trafo.at[trafo_idx, 'p_lv_mw']
+Q_to_trafo_MVAr = net.res_trafo.at[trafo_idx, 'q_lv_mvar']
+print(P_from_trafo_MW, Q_from_trafo_MVAr, P_to_trafo_MW, Q_to_trafo_MVAr)
+# pertes
+P_loss_trafo = P_from_trafo_MW - P_to_trafo_MW
+Q_loss_trafo = Q_from_trafo_MVAr - Q_to_trafo_MVAr
+print("Trafo losses (MW,MVAr):", P_loss_trafo, Q_loss_trafo)
+
+import numpy as np
+
+# ========================================
+# Q1.5 : TRANSITS DE PUISSANCE TRANSFORMATEUR N5-N106
+# ========================================
+
+# Identification du transformateur N5-N106
+trafo_idx = net.trafo[net.trafo['name'] == 'N5N106'].index[0]
+
+print(f"\n{'='*60}")
+print(f"Q1.5 : TRANSITS DE PUISSANCE TRANSFORMATEUR N5-N106")
+print(f"{'='*60}")
+
+# ========================================
+# EXTRACTION DES DONNÉES PANDAPOWER
+# ========================================
+
+# Bus HV et LV
+hv_bus = net.trafo.at[trafo_idx, 'hv_bus']
+lv_bus = net.trafo.at[trafo_idx, 'lv_bus']
+
+hv_bus_name = net.bus.at[hv_bus, 'name']
+lv_bus_name = net.bus.at[lv_bus, 'name']
+
+# Puissances côté HV (High Voltage)
+P_hv_pp = net.res_trafo.at[trafo_idx, 'p_hv_mw']
+Q_hv_pp = net.res_trafo.at[trafo_idx, 'q_hv_mvar']
+
+# Puissances côté LV (Low Voltage)
+P_lv_pp = net.res_trafo.at[trafo_idx, 'p_lv_mw']
+Q_lv_pp = net.res_trafo.at[trafo_idx, 'q_lv_mvar']
+
+print(f"\n--- Informations du transformateur ---")
+print(f"Nom : {net.trafo.at[trafo_idx, 'name']}")
+print(f"Bus HV : {hv_bus_name} ({net.trafo.at[trafo_idx, 'vn_hv_kv']} kV)")
+print(f"Bus LV : {lv_bus_name} ({net.trafo.at[trafo_idx, 'vn_lv_kv']} kV)")
+print(f"Sn : {net.trafo.at[trafo_idx, 'sn_mva']} MVA")
+
+print(f"\n--- Puissances côté HV (pandapower) ---")
+print(f"P_HV = {P_hv_pp:.4f} MW")
+print(f"Q_HV = {Q_hv_pp:.4f} MVAr")
+
+print(f"\n--- Puissances côté LV (pandapower) ---")
+print(f"P_LV = {P_lv_pp:.4f} MW")
+print(f"Q_LV = {Q_lv_pp:.4f} MVAr")
+
+# ========================================
+# CALCUL MANUEL DES TRANSITS (CÔTÉ HV)
+# ========================================
+
+# Tensions aux bus (résultats du load flow)
+V_hv_pu = net.res_bus.at[hv_bus, 'vm_pu']
+V_lv_pu = net.res_bus.at[lv_bus, 'vm_pu']
+theta_hv = np.deg2rad(net.res_bus.at[hv_bus, 'va_degree'])
+theta_lv = np.deg2rad(net.res_bus.at[lv_bus, 'va_degree'])
+
+# Paramètres du transformateur
+Sn_trafo = net.trafo.at[trafo_idx, 'sn_mva']
+vn_hv_kv = net.trafo.at[trafo_idx, 'vn_hv_kv']
+vn_lv_kv = net.trafo.at[trafo_idx, 'vn_lv_kv']
+vk_percent = net.trafo.at[trafo_idx, 'vk_percent']
+vkr_percent = net.trafo.at[trafo_idx, 'vkr_percent']
+pfe_kw = net.trafo.at[trafo_idx, 'pfe_kw']
+i0_percent = net.trafo.at[trafo_idx, 'i0_percent']
+
+# Impédance du transformateur (en p.u. sur sa base propre)
+Zk_pu_own = vk_percent / 100
+Rk_pu_own = vkr_percent / 100
+Xk_pu_own = np.sqrt(Zk_pu_own**2 - Rk_pu_own**2)
+
+# Conversion à la base commune (100 MVA)
+Sbase_MVA = net.sn_mva
+Zk_pu = Zk_pu_own * (Sbase_MVA / Sn_trafo)
+Rk_pu = Rk_pu_own * (Sbase_MVA / Sn_trafo)
+Xk_pu = Xk_pu_own * (Sbase_MVA / Sn_trafo)
+
+Z_trafo_pu = Rk_pu + 1j * Xk_pu
+
+# Rapport de transformation (avec tap)
+tap_pos = net.trafo.at[trafo_idx, 'tap_pos']
+tap_neutral = net.trafo.at[trafo_idx, 'tap_neutral']
+tap_step_percent = net.trafo.at[trafo_idx, 'tap_step_percent']
+tap_side = net.trafo.at[trafo_idx, 'tap_side']
+
+# Calcul du rapport effectif
+tap_correction = 1 + (tap_pos - tap_neutral) * tap_step_percent / 100
+
+if tap_side == "hv":
+    n_ratio = (vn_hv_kv / vn_lv_kv) * tap_correction
+else:  # tap_side == "lv"
+    n_ratio = (vn_hv_kv / vn_lv_kv) / tap_correction
+
+print(f"\n--- Paramètres du transformateur ---")
+print(f"Zk (base propre) = {Zk_pu_own:.6f} p.u. (sur {Sn_trafo} MVA)")
+print(f"Zk (base 100 MVA) = {abs(Z_trafo_pu):.6f} ∠ {np.angle(Z_trafo_pu, deg=True):.2f}° p.u.")
+print(f"Tap position = {tap_pos} (neutral = {tap_neutral})")
+print(f"Rapport n = {n_ratio:.6f}")
+
+# Phaseurs de tension (en p.u. sur base commune)
+V_hv_complex = V_hv_pu * np.exp(1j * theta_hv)
+V_lv_complex = V_lv_pu * np.exp(1j * theta_lv)
+
+# Tension LV ramenée au primaire
+V_lv_referred = V_lv_complex * n_ratio
+
+# Courant dans le transformateur (approximation sans magnétisation)
+I_trafo_pu = (V_hv_complex - V_lv_referred) / Z_trafo_pu
+
+# Puissance complexe côté HV
+S_hv_pu = V_hv_complex * np.conj(I_trafo_pu)
+P_hv_calc = S_hv_pu.real * Sbase_MVA
+Q_hv_calc = S_hv_pu.imag * Sbase_MVA
+
+print(f"\n--- Calcul manuel (côté HV) ---")
+print(f"V_HV = {V_hv_pu:.5f} ∠ {np.rad2deg(theta_hv):.3f}° p.u.")
+print(f"V_LV = {V_lv_pu:.5f} ∠ {np.rad2deg(theta_lv):.3f}° p.u.")
+print(f"V_LV (ramené au HV) = {abs(V_lv_referred):.5f} ∠ {np.angle(V_lv_referred, deg=True):.3f}° p.u.")
+print(f"I_trafo = {abs(I_trafo_pu):.5f} ∠ {np.angle(I_trafo_pu, deg=True):.3f}° p.u.")
+
+print(f"\nP_HV (calcul) = {P_hv_calc:.4f} MW")
+print(f"P_HV (pandapower) = {P_hv_pp:.4f} MW")
+print(f"Erreur P = {abs(P_hv_calc - P_hv_pp):.4f} MW")
+
+print(f"\nQ_HV (calcul) = {Q_hv_calc:.4f} MVAr")
+print(f"Q_HV (pandapower) = {Q_hv_pp:.4f} MVAr")
+print(f"Erreur Q = {abs(Q_hv_calc - Q_hv_pp):.4f} MVAr")
+
+# ========================================
+# VÉRIFICATION VIA COURANT
+# ========================================
+
+# Courant côté HV en kA
+I_base_hv = (Sbase_MVA * 1000) / (np.sqrt(3) * vn_hv_kv)
+I_hv_ka_calc = abs(I_trafo_pu) * I_base_hv / 1000
+I_hv_ka_pp = net.res_trafo.at[trafo_idx, 'i_hv_ka']
+
+print(f"\n--- Vérification du courant HV ---")
+print(f"I_HV (calcul) = {I_hv_ka_calc:.4f} kA")
+print(f"I_HV (pandapower) = {I_hv_ka_pp:.4f} kA")
+print(f"Erreur I = {abs(I_hv_ka_calc - I_hv_ka_pp):.6f} kA")
+
+# ========================================
+# RÉCAPITULATIF
+# ========================================
+
+print(f"\n{'='*60}")
+print(f"RÉCAPITULATIF Q1.5")
+print(f"{'='*60}")
+print(f"Transformateur : N5-N106 ({vn_hv_kv} kV / {vn_lv_kv} kV, {Sn_trafo} MVA)")
+print(f"\nPuissances côté HV (High Voltage) :")
+print(f"  P_HV = {P_hv_pp:.4f} MW")
+print(f"  Q_HV = {Q_hv_pp:.4f} MVAr")
+print(f"  S_HV = {np.sqrt(P_hv_pp**2 + Q_hv_pp**2):.4f} MVA")
+print(f"\nCourant côté HV :")
+print(f"  I_HV = {I_hv_ka_pp:.4f} kA")
+print(f"{'='*60}")

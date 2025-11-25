@@ -5,6 +5,10 @@ import pandapower.plotting as plot
 from pandapower.plotting.plotly import pf_res_plotly
 from pandapower.plotting.plotly import simple_plotly
 import pandapower.control as ct
+from pandapower.plotting.generic_geodata import create_generic_coordinates
+
+
+
 net = pp.create_empty_network(f_hz=50, sn_mva=100)
     
 vmin = 0.95
@@ -147,7 +151,14 @@ ct.controller.trafo.DiscreteTapControl.DiscreteTapControl(net,16, 1.01,1.021, or
 ct.controller.trafo.DiscreteTapControl.DiscreteTapControl(net,17, 1.01,1.021, order = 0)
 ct.controller.trafo.DiscreteTapControl.DiscreteTapControl(net,18, 1.01,1.021, order = 0)
 
+#create_generic_coordinates(net)
 
-# plots of system
-#pf_res_plotly(net, aspectratio=(1,1))
+# Trace le réseau (simple_plotly gère automatiquement les geodata)
 #simple_plotly(net)
+
+# Calcul du load flow
+pp.runpp(net)
+
+# Affichage des résultats
+#print("Affichage des résultats...")
+#pf_res_plotly(net)
