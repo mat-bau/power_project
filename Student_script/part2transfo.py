@@ -8,6 +8,14 @@ from pandapower.plotting.plotly import simple_plotly
 import pandapower.control as ct
 import numpy as np
 net = pp.create_empty_network(f_hz=50, sn_mva=100)
+
+# ---------- Sélection exos ----------
+exo2_1 = False
+exo2_2 = False
+exo2_3 = False
+exo2_4_1 = False
+exo2_4_2 = False
+#---------------------------------------
     
 vmin = 0.95
 vmax = 1.1
@@ -178,13 +186,6 @@ print("\n=== LIGNES – Référence ===")
 print(line_ref)
 print("\n=== GÉNÉRATEURS – Référence ===")
 print(gen_ref)
-
-# ---------- Sélection exos ----------
-exo2_1 = False
-exo2_2 = False
-exo2_3 = False
-exo2_4_1 = False
-exo2_4_2 = False
 
 # ---------- 2.1) ÉTAT AVEC N4–N102 EN Yd11 ----------
 if exo2_1:
