@@ -1,4 +1,5 @@
 import pandapower as pp 
+import copy
 from pandapower.control.controller.trafo.ContinuousTapControl import ContinuousTapControl
 import pandapower.topology as top
 import pandapower.plotting as plot
@@ -148,14 +149,347 @@ ct.controller.trafo.DiscreteTapControl.DiscreteTapControl(net,16, 1.01,1.021, or
 ct.controller.trafo.DiscreteTapControl.DiscreteTapControl(net,17, 1.01,1.021, order = 0)
 ct.controller.trafo.DiscreteTapControl.DiscreteTapControl(net,18, 1.01,1.021, order = 0)
 
+## Run power flow sur le réseau de base
+pp.runpp(net, algorithm='nr', calculate_voltage_angles=True)
+
+# créer une copie de référence
+net_ref = copy.deepcopy(net)
+
+# (re)lancer le power flow sur la copie si tu veux être sûr)
+pp.runpp(net_ref, algorithm='nr', calculate_voltage_angles=True)
+
+# maintenant seulement tu peux faire :
+bus_ref  = net_ref.res_bus[['vm_pu', 'va_degree']].copy()
+bus_ref.insert(0, 'name', net_ref.bus['name'].values)
+
+line_ref = net_ref.res_line[['loading_percent', 'p_from_mw', 'q_from_mvar']].copy()
+line_ref.insert(0, 'name', net_ref.line['name'].values)
+line_ref.insert(1, 'from_bus', net_ref.line['from_bus'].map(net_ref.bus['name']).values)
+line_ref.insert(2, 'to_bus',   net_ref.line['to_bus'].map(net_ref.bus['name']).values)
+
+gen_ref  = net_ref.res_gen[['p_mw', 'q_mvar', 'vm_pu']].copy()
+gen_ref.insert(0, 'name', net_ref.gen['name'].values)
 
 
-"""
 
-Launch the Power Flow routine here 
+print("\n=== BUS – Référence ===")
+print(bus_ref)
+print("\n=== LIGNES – Référence ===")
+print(line_ref)
+print("\n=== GÉNÉRATEURS – Référence ===")
+print(gen_ref)
 
-+
+# ---------- Sélection exos ----------
+exo2_1 = False
+exo2_2 = False
+exo2_3 = False
+exo2_4_1 = True
+exo2_4_2 = False
 
-Display the results you need
+# ---------- 2.1) ÉTAT AVEC N4–N102 EN Yd11 ----------
+if exo2_1:
+    print("\n=== Exo 2.1 : N4–N102 en Yd11 ===")
 
-"""
+    net_mod = copy.deepcopy(net)
+
+    # trouver l’index du transfo N4N102
+    idx_t = net_mod.trafo.index[net_mod.trafo['name'] == 'N4N102'][0]
+
+    # modifier le couplage : étoile-étoile -> étoile-triangle Yd11
+    net_mod.trafo.at[idx_t, 'shift_degree'] = 30.0
+    net_mod.trafo.at[idx_t, 'vector_group'] = "Yd11"
+
+    pp.runpp(net_mod, algorithm='nr', calculate_voltage_angles=True)
+
+    # Résultats modifiés
+    bus_mod  = net_mod.res_bus[['vm_pu', 'va_degree']].copy()
+    bus_mod.insert(0, 'name', net_mod.bus['name'].values)
+
+    line_mod = net_mod.res_line[['loading_percent', 'p_from_mw', 'q_from_mvar']].copy()
+    line_mod.insert(0, 'name', net_mod.line['name'].values)
+    line_mod.insert(1, 'from_bus', net_mod.line['from_bus'].map(net_mod.bus['name']).values)
+    line_mod.insert(2, 'to_bus',   net_mod.line['to_bus'].map(net_mod.bus['name']).values)
+
+    gen_mod  = net_mod.res_gen[['p_mw', 'q_mvar', 'vm_pu']].copy()
+    gen_mod.insert(0, 'name', net_mod.gen['name'].values)
+
+    # ---------- 3) TABLEAUX COMPARATIFS (Δ = mod - ref) ----------
+    # Buses : delta sur colonnes numériques, indexées par name
+    bus_ref_num = bus_ref.set_index('name')[['vm_pu', 'va_degree']]
+    bus_mod_num = bus_mod.set_index('name')[['vm_pu', 'va_degree']]
+    bus_delta   = bus_mod_num - bus_ref_num
+
+    # Lignes
+    line_ref_num = line_ref.set_index('name')[['loading_percent', 'p_from_mw', 'q_from_mvar']]
+    line_mod_num = line_mod.set_index('name')[['loading_percent', 'p_from_mw', 'q_from_mvar']]
+    line_delta   = line_mod_num - line_ref_num
+
+    # Générateurs
+    gen_ref_num = gen_ref.set_index('name')[['p_mw', 'q_mvar', 'vm_pu']]
+    gen_mod_num = gen_mod.set_index('name')[['p_mw', 'q_mvar', 'vm_pu']]
+    gen_delta   = gen_mod_num - gen_ref_num
+
+    print("\n=== BUS – Modifié (N4–N102 Yd11) ===")
+    print(bus_mod)
+    print("\n=== LIGNES – Modifié (N4–N102 Yd11) ===")
+    print(line_mod)
+    print("\n=== GÉNÉRATEURS – Modifié (N4–N102 Yd11) ===")
+    print(gen_mod)
+
+    print("\n=== BUS – Variation (mod - ref) ===")
+    print(bus_delta)
+    print("\n=== LIGNES – Variation (mod - ref) ===")
+    print(line_delta)
+    print("\n=== GÉNÉRATEURS – Variation (mod - ref) ===")
+    print(gen_delta)
+
+
+
+
+ # ---------- 2.2) ÉTAT AVEC TRANSFO N6–N104 MODIFIÉ ----------
+if exo2_2:
+    print("\n=== Exo 2.2 ===")
+
+    net_mod = copy.deepcopy(net)
+
+    # trouver l’index du transfo N6N104
+    idx_t = net_mod.trafo.index[net_mod.trafo['name'] == 'N6N104'][0]
+
+    # modifier le rapport nominal : 380/150 -> 380/165
+    net_mod.trafo.at[idx_t, 'vn_hv_kv'] = 380.0
+    net_mod.trafo.at[idx_t, 'vn_lv_kv'] = 165.0
+    # on laisse tap_pos = 2 inchangé
+
+    pp.runpp(net_mod, algorithm='nr', calculate_voltage_angles=True)
+
+    bus_mod  = net_mod.res_bus[['vm_pu', 'va_degree']].copy()
+    bus_mod.insert(0, 'name', net_mod.bus['name'].values)
+
+    line_mod = net_mod.res_line[['loading_percent', 'p_from_mw', 'q_from_mvar']].copy()
+    line_mod.insert(0, 'name', net_mod.line['name'].values)
+    line_mod.insert(1, 'from_bus', net_mod.line['from_bus'].map(net_mod.bus['name']).values)
+    line_mod.insert(2, 'to_bus',   net_mod.line['to_bus'].map(net_mod.bus['name']).values)
+
+    gen_mod  = net_mod.res_gen[['p_mw', 'q_mvar', 'vm_pu']].copy()
+    gen_mod.insert(0, 'name', net_mod.gen['name'].values)
+
+
+    # ---------- 3) TABLEAUX COMPARATIFS (Δ = mod - ref) ----------
+
+    # Buses : on met le name en index et on ne garde que les colonnes numériques pour le delta
+    bus_ref_num = bus_ref.set_index('name')[['vm_pu', 'va_degree']]
+    bus_mod_num = bus_mod.set_index('name')[['vm_pu', 'va_degree']]
+    bus_delta   = bus_mod_num - bus_ref_num
+
+    # Lignes
+    line_ref_num = line_ref.set_index('name')[['loading_percent', 'p_from_mw', 'q_from_mvar']]
+    line_mod_num = line_mod.set_index('name')[['loading_percent', 'p_from_mw', 'q_from_mvar']]
+    line_delta   = line_mod_num - line_ref_num
+
+    # Générateurs
+    gen_ref_num = gen_ref.set_index('name')[['p_mw', 'q_mvar', 'vm_pu']]
+    gen_mod_num = gen_mod.set_index('name')[['p_mw', 'q_mvar', 'vm_pu']]
+    gen_delta   = gen_mod_num - gen_ref_num
+
+
+
+    print("\n=== BUS – Modifié (N6–N104 +10%) ===")
+    print(bus_mod)
+    print("\n=== LIGNES – Modifié (N6–N104 +10%) ===")
+    print(line_mod)
+    print("\n=== GÉNÉRATEURS – Modifié (N6–N104 +10%) ===")
+    print(gen_mod)
+
+    print("\n=== BUS – Variation (mod - ref) ===")
+    print(bus_delta)
+    print("\n=== LIGNES – Variation (mod - ref) ===")
+    print(line_delta)
+    print("\n=== GÉNÉRATEURS – Variation (mod - ref) ===")
+    print(gen_delta)
+
+
+# ---------- 2.3) ÉTAT AVEC ANGLE N6–N104 MODIFIÉ ----------
+if exo2_3:
+    print("\n=== Exo 2.3 : N6–N104 – angle de phase modifié ===")
+
+    net_mod = copy.deepcopy(net)
+
+    # trouver l’index du transfo N6N104
+    idx_t = net_mod.trafo.index[net_mod.trafo['name'] == 'N6N104'][0]
+
+    # valeur initiale (dans le réseau de base, d’après l’énoncé) :
+    # shift_degree = 0.0 deg
+    # on fait une variation de +10° autour de cette valeur
+    net_mod.trafo.at[idx_t, 'shift_degree'] = 10.0
+
+    # (si tu veux tester -10°, tu peux faire -10.0, ou deux runs séparés)
+
+    pp.runpp(net_mod, algorithm='nr', calculate_voltage_angles=True)
+
+    # Résultats modifiés
+    bus_mod  = net_mod.res_bus[['vm_pu', 'va_degree']].copy()
+    bus_mod.insert(0, 'name', net_mod.bus['name'].values)
+
+    line_mod = net_mod.res_line[['loading_percent', 'p_from_mw', 'q_from_mvar']].copy()
+    line_mod.insert(0, 'name', net_mod.line['name'].values)
+    line_mod.insert(1, 'from_bus', net_mod.line['from_bus'].map(net_mod.bus['name']).values)
+    line_mod.insert(2, 'to_bus',   net_mod.line['to_bus'].map(net_mod.bus['name']).values)
+
+    gen_mod  = net_mod.res_gen[['p_mw', 'q_mvar', 'vm_pu']].copy()
+    gen_mod.insert(0, 'name', net_mod.gen['name'].values)
+
+    # ---------- 3) TABLEAUX COMPARATIFS (Δ = mod - ref) ----------
+    # Buses
+    bus_ref_num = bus_ref.set_index('name')[['vm_pu', 'va_degree']]
+    bus_mod_num = bus_mod.set_index('name')[['vm_pu', 'va_degree']]
+    bus_delta   = bus_mod_num - bus_ref_num
+
+    # Lignes
+    line_ref_num = line_ref.set_index('name')[['loading_percent', 'p_from_mw', 'q_from_mvar']]
+    line_mod_num = line_mod.set_index('name')[['loading_percent', 'p_from_mw', 'q_from_mvar']]
+    line_delta   = line_mod_num - line_ref_num
+
+    # Générateurs
+    gen_ref_num = gen_ref.set_index('name')[['p_mw', 'q_mvar', 'vm_pu']]
+    gen_mod_num = gen_mod.set_index('name')[['p_mw', 'q_mvar', 'vm_pu']]
+    gen_delta   = gen_mod_num - gen_ref_num
+
+    print("\n=== BUS – Modifié (N6–N104, shift_degree = +10°) ===")
+    print(bus_mod)
+    print("\n=== LIGNES – Modifié (N6–N104, shift_degree = +10°) ===")
+    print(line_mod)
+    print("\n=== GÉNÉRATEURS – Modifié (N6–N104, shift_degree = +10°) ===")
+    print(gen_mod)
+
+    print("\n=== BUS – Variation (mod - ref) ===")
+    print(bus_delta)
+    print("\n=== LIGNES – Variation (mod - ref) ===")
+    print(line_delta)
+    print("\n=== GÉNÉRATEURS – Variation (mod - ref) ===")
+    print(gen_delta)
+
+# ---------- 2.4.1) ÉTAT AVEC TRANSFO N2–N107 MODIFIÉ ----------
+if exo2_4_1:
+    print("\n=== Exo 2.4.1 ===")
+
+    net_mod = copy.deepcopy(net)
+
+    # trouver l’index du transfo N6N104
+    idx_t = net_mod.trafo.index[net_mod.trafo['name'] == 'N2N107'][0]
+
+    # modifier le rapport nominal : 380/150 -> 380/165
+    net_mod.trafo.at[idx_t, 'vn_hv_kv'] = 380.0
+    net_mod.trafo.at[idx_t, 'vn_lv_kv'] = 165.0
+    # on laisse tap_pos = 2 inchangé
+
+    pp.runpp(net_mod, algorithm='nr', calculate_voltage_angles=True)
+
+    bus_mod  = net_mod.res_bus[['vm_pu', 'va_degree']].copy()
+    bus_mod.insert(0, 'name', net_mod.bus['name'].values)
+
+    line_mod = net_mod.res_line[['loading_percent', 'p_from_mw', 'q_from_mvar']].copy()
+    line_mod.insert(0, 'name', net_mod.line['name'].values)
+    line_mod.insert(1, 'from_bus', net_mod.line['from_bus'].map(net_mod.bus['name']).values)
+    line_mod.insert(2, 'to_bus',   net_mod.line['to_bus'].map(net_mod.bus['name']).values)
+
+    gen_mod  = net_mod.res_gen[['p_mw', 'q_mvar', 'vm_pu']].copy()
+    gen_mod.insert(0, 'name', net_mod.gen['name'].values)
+
+
+    # ---------- 3) TABLEAUX COMPARATIFS (Δ = mod - ref) ----------
+
+    # Buses : on met le name en index et on ne garde que les colonnes numériques pour le delta
+    bus_ref_num = bus_ref.set_index('name')[['vm_pu', 'va_degree']]
+    bus_mod_num = bus_mod.set_index('name')[['vm_pu', 'va_degree']]
+    bus_delta   = bus_mod_num - bus_ref_num
+
+    # Lignes
+    line_ref_num = line_ref.set_index('name')[['loading_percent', 'p_from_mw', 'q_from_mvar']]
+    line_mod_num = line_mod.set_index('name')[['loading_percent', 'p_from_mw', 'q_from_mvar']]
+    line_delta   = line_mod_num - line_ref_num
+
+    # Générateurs
+    gen_ref_num = gen_ref.set_index('name')[['p_mw', 'q_mvar', 'vm_pu']]
+    gen_mod_num = gen_mod.set_index('name')[['p_mw', 'q_mvar', 'vm_pu']]
+    gen_delta   = gen_mod_num - gen_ref_num
+
+
+
+    print("\n=== BUS – Modifié (N2–N107 +10%) ===")
+    print(bus_mod)
+    print("\n=== LIGNES – Modifié (N2–N107 +10%) ===")
+    print(line_mod)
+    print("\n=== GÉNÉRATEURS – Modifié (N2–N107 +10%) ===")
+    print(gen_mod)
+
+    print("\n=== BUS – Variation (mod - ref) ===")
+    print(bus_delta)
+    print("\n=== LIGNES – Variation (mod - ref) ===")
+    print(line_delta)
+    print("\n=== GÉNÉRATEURS – Variation (mod - ref) ===")
+    print(gen_delta)
+
+# ---------- 2.4.2) ÉTAT AVEC ANGLE N2–N107 MODIFIÉ ----------
+if exo2_4_2:
+    print("\n=== Exo 2.4 : N2–N107 – angle de phase modifié ===")
+
+    net_mod = copy.deepcopy(net)
+
+    # trouver l’index du transfo N6N104
+    idx_t = net_mod.trafo.index[net_mod.trafo['name'] == 'N2N107'][0]
+
+    # valeur initiale (dans le réseau de base, d’après l’énoncé) :
+    # shift_degree = 0.0 deg
+    # on fait une variation de +10° autour de cette valeur
+    net_mod.trafo.at[idx_t, 'shift_degree'] = 10.0
+
+    # (si tu veux tester -10°, tu peux faire -10.0, ou deux runs séparés)
+
+    pp.runpp(net_mod, algorithm='nr', calculate_voltage_angles=True)
+
+    # Résultats modifiés
+    bus_mod  = net_mod.res_bus[['vm_pu', 'va_degree']].copy()
+    bus_mod.insert(0, 'name', net_mod.bus['name'].values)
+
+    line_mod = net_mod.res_line[['loading_percent', 'p_from_mw', 'q_from_mvar']].copy()
+    line_mod.insert(0, 'name', net_mod.line['name'].values)
+    line_mod.insert(1, 'from_bus', net_mod.line['from_bus'].map(net_mod.bus['name']).values)
+    line_mod.insert(2, 'to_bus',   net_mod.line['to_bus'].map(net_mod.bus['name']).values)
+
+    gen_mod  = net_mod.res_gen[['p_mw', 'q_mvar', 'vm_pu']].copy()
+    gen_mod.insert(0, 'name', net_mod.gen['name'].values)
+
+    # ---------- 3) TABLEAUX COMPARATIFS (Δ = mod - ref) ----------
+    # Buses
+    bus_ref_num = bus_ref.set_index('name')[['vm_pu', 'va_degree']]
+    bus_mod_num = bus_mod.set_index('name')[['vm_pu', 'va_degree']]
+    bus_delta   = bus_mod_num - bus_ref_num
+
+    # Lignes
+    line_ref_num = line_ref.set_index('name')[['loading_percent', 'p_from_mw', 'q_from_mvar']]
+    line_mod_num = line_mod.set_index('name')[['loading_percent', 'p_from_mw', 'q_from_mvar']]
+    line_delta   = line_mod_num - line_ref_num
+
+    # Générateurs
+    gen_ref_num = gen_ref.set_index('name')[['p_mw', 'q_mvar', 'vm_pu']]
+    gen_mod_num = gen_mod.set_index('name')[['p_mw', 'q_mvar', 'vm_pu']]
+    gen_delta   = gen_mod_num - gen_ref_num
+
+    print("\n=== BUS – Modifié (N2–N107, shift_degree = +10°) ===")
+    print(bus_mod)
+    print("\n=== LIGNES – Modifié (N2–N107, shift_degree = +10°) ===")
+    print(line_mod)
+    print("\n=== GÉNÉRATEURS – Modifié (N2–N107, shift_degree = +10°) ===")
+    print(gen_mod)
+
+    print("\n=== BUS – Variation (mod - ref) ===")
+    print(bus_delta)
+    print("\n=== LIGNES – Variation (mod - ref) ===")
+    print(line_delta)
+    print("\n=== GÉNÉRATEURS – Variation (mod - ref) ===")
+    print(gen_delta)
+
+
+
+
+
