@@ -183,7 +183,7 @@ print(gen_ref)
 exo2_1 = False
 exo2_2 = False
 exo2_3 = False
-exo2_4_1 = True
+exo2_4_1 = False
 exo2_4_2 = False
 
 # ---------- 2.1) ÉTAT AVEC N4–N102 EN Yd11 ----------
