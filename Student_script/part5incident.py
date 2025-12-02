@@ -1,4 +1,5 @@
 import pandapower as pp 
+import copy
 from pandapower.control.controller.trafo.ContinuousTapControl import ContinuousTapControl
 import pandapower.topology as top
 import pandapower.plotting as plot
@@ -11,6 +12,13 @@ net = pp.create_empty_network(f_hz=50, sn_mva=100)
 vmin = 0.95
 vmax = 1.1
 load_max = 100.
+
+# ---------- Sélection exos ----------
+exo5_1 = False
+exo5_2 = False
+exo5_3 = False
+exo5_4 = False
+#---------------------------------------
 
     
 # list of Buses
@@ -147,3 +155,296 @@ ct.controller.trafo.DiscreteTapControl.DiscreteTapControl(net,15, 1.01,1.021, or
 ct.controller.trafo.DiscreteTapControl.DiscreteTapControl(net,16, 1.01,1.021, order = 0)
 ct.controller.trafo.DiscreteTapControl.DiscreteTapControl(net,17, 1.01,1.021, order = 0)
 ct.controller.trafo.DiscreteTapControl.DiscreteTapControl(net,18, 1.01,1.021, order = 0)
+
+# ---------- RÉFÉRENCE (une seule fois !) ----------
+
+# on part du réseau net déjà créé + contrôleurs
+pp.runpp(net, algorithm='nr', calculate_voltage_angles=True,
+         enforce_q_lims=True, run_control=True)
+
+# Tables de référence
+bus_ref = net.res_bus[['vm_pu', 'va_degree']].copy()
+bus_ref.insert(0, 'name', net.bus['name'].values)
+bus_ref_num = bus_ref.set_index('name')[['vm_pu', 'va_degree']]
+
+line_ref = net.res_line[['loading_percent', 'p_from_mw', 'q_from_mvar']].copy()
+line_ref.insert(0, 'name', net.line['name'].values)
+line_ref.insert(1, 'from_bus', net.line['from_bus'].map(net.bus['name']).values)
+line_ref.insert(2, 'to_bus',   net.line['to_bus'].map(net.bus['name']).values)
+line_ref_num = line_ref.set_index('name')[['loading_percent', 'p_from_mw', 'q_from_mvar']]
+
+gen_ref = net.res_gen[['p_mw', 'q_mvar', 'vm_pu']].copy()
+gen_ref.insert(0, 'name', net.gen['name'].values)
+gen_ref_num = gen_ref.set_index('name')[['p_mw', 'q_mvar', 'vm_pu']]
+
+print("\n=== BUS – Référence ===")
+print(bus_ref)
+print("\n=== LIGNES – Référence ===")
+print(line_ref)
+print("\n=== GÉNÉRATEURS – Référence ===")
+print(gen_ref)
+
+# ====================== EXO 5.1 : PERTE DE M1 ======================
+if exo5_1:
+    print("\n=== Exo 5.1 : Perte de M1 – Load Flow pandapower ===")
+
+    # 1) Copier le réseau de référence
+    net_mod = copy.deepcopy(net)
+
+    # 2) Mettre le générateur M1 hors service
+    idx_g_M1 = net_mod.gen.index[net_mod.gen['name'] == 'M1'][0]
+    net_mod.gen.at[idx_g_M1, 'in_service'] = False
+    # (optionnel) couper aussi le transfo M1N1
+    # idx_tr_M1 = net_mod.trafo.index[net_mod.trafo['name'] == 'M1N1'][0]
+    # net_mod.trafo.at[idx_tr_M1, 'in_service'] = False
+
+    # 3) Lancer le load flow
+    try:
+        pp.runpp(net_mod, algorithm='nr',
+                 calculate_voltage_angles=True,
+                 enforce_q_lims=True,
+                 run_control=True)
+        converged = True
+    except Exception as e:
+        converged = False
+        print("\n>>> Le load flow ne converge pas :", e)
+
+    if converged:
+        # 4) Résultats modifiés
+        bus_mod = net_mod.res_bus[['vm_pu', 'va_degree']].copy()
+        bus_mod.insert(0, 'name', net_mod.bus['name'].values)
+        bus_mod_num = bus_mod.set_index('name')[['vm_pu', 'va_degree']]
+
+        line_mod = net_mod.res_line[['loading_percent', 'p_from_mw', 'q_from_mvar']].copy()
+        line_mod.insert(0, 'name', net_mod.line['name'].values)
+        line_mod.insert(1, 'from_bus', net_mod.line['from_bus'].map(net_mod.bus['name']).values)
+        line_mod.insert(2, 'to_bus',   net_mod.line['to_bus'].map(net_mod.bus['name']).values)
+        line_mod_num = line_mod.set_index('name')[['loading_percent', 'p_from_mw', 'q_from_mvar']]
+
+        gen_mod = net_mod.res_gen[['p_mw', 'q_mvar', 'vm_pu']].copy()
+        gen_mod.insert(0, 'name', net_mod.gen['name'].values)
+        gen_mod_num = gen_mod.set_index('name')[['p_mw', 'q_mvar', 'vm_pu']]
+
+        # 5) Δ = mod - ref (avec les ref déjà calculées plus haut)
+        bus_delta  = bus_mod_num  - bus_ref_num
+        line_delta = line_mod_num - line_ref_num
+        gen_delta  = gen_mod_num  - gen_ref_num
+
+        # 6) Affichages
+        print("\n=== BUS – Modifié (M1 perdu) ===")
+        print(bus_mod)
+
+        print("\n=== LIGNES – Modifié (M1 perdu) ===")
+        print(line_mod)
+
+        print("\n=== GÉNÉRATEURS – Modifié (M1 perdu) ===")
+        print(gen_mod)
+
+        print("\n=== BUS – Variation (mod - ref) ===")
+        print(bus_delta)
+
+        print("\n=== LIGNES – Variation (mod - ref) ===")
+        print(line_delta)
+
+        print("\n=== GÉNÉRATEURS – Variation (mod - ref) ===")
+        print(gen_delta)
+    else:
+        print("\n=== AUCUN ÉTAT STATIONNAIRE TROUVÉ (perte M1) ===")
+# ==================================================================
+
+# ====================== EXO 5.2 : PERTE DE M4 ======================
+if exo5_2:
+    print("\n=== Exo 5.2 : Perte de M4 – Load Flow pandapower ===")
+
+    # 1) Copier le réseau de référence
+    net_mod = copy.deepcopy(net)
+
+    # 2) Mettre le générateur M4 hors service
+    idx_g_M4 = net_mod.gen.index[net_mod.gen['name'] == 'M4'][0]
+    net_mod.gen.at[idx_g_M4, 'in_service'] = False
+
+    # 3) Lancer le load flow
+    try:
+        pp.runpp(net_mod, algorithm='nr',
+                 calculate_voltage_angles=True,
+                 enforce_q_lims=True,
+                 run_control=True)
+        converged = True
+    except Exception as e:
+        converged = False
+        print("\n>>> Le load flow ne converge pas : ", e)
+
+    if converged:
+        # 4) Résultats modifiés
+        bus_mod = net_mod.res_bus[['vm_pu', 'va_degree']].copy()
+        bus_mod.insert(0, 'name', net_mod.bus['name'].values)
+        bus_mod_num = bus_mod.set_index('name')[['vm_pu', 'va_degree']]
+
+        line_mod = net_mod.res_line[['loading_percent', 'p_from_mw', 'q_from_mvar']].copy()
+        line_mod.insert(0, 'name', net_mod.line['name'].values)
+        line_mod.insert(1, 'from_bus', net_mod.line['from_bus'].map(net_mod.bus['name']).values)
+        line_mod.insert(2, 'to_bus',   net_mod.line['to_bus'].map(net_mod.bus['name']).values)
+        line_mod_num = line_mod.set_index('name')[['loading_percent', 'p_from_mw', 'q_from_mvar']]
+
+        gen_mod = net_mod.res_gen[['p_mw', 'q_mvar', 'vm_pu']].copy()
+        gen_mod.insert(0, 'name', net_mod.gen['name'].values)
+        gen_mod_num = gen_mod.set_index('name')[['p_mw', 'q_mvar', 'vm_pu']]
+
+        # 5) Δ = mod - ref (alignement par name)
+        bus_delta  = bus_mod_num  - bus_ref_num
+        line_delta = line_mod_num - line_ref_num
+        gen_delta  = gen_mod_num  - gen_ref_num
+
+        # 6) Affichages
+        print("\n=== BUS – Modifié (M4 perdu) ===")
+        print(bus_mod)
+
+        print("\n=== LIGNES – Modifié (M4 perdu) ===")
+        print(line_mod)
+
+        print("\n=== GÉNÉRATEURS – Modifié (M4 perdu) ===")
+        print(gen_mod)
+
+        print("\n=== BUS – Variation (mod - ref) ===")
+        print(bus_delta)
+
+        print("\n=== LIGNES – Variation (mod - ref) ===")
+        print(line_delta)
+
+        print("\n=== GÉNÉRATEURS – Variation (mod - ref) ===")
+        print(gen_delta)
+    else:
+        print("\n=== AUCUN ÉTAT STATIONNAIRE TROUVÉ (perte M4) ===")
+
+
+# ====================== EXO 5.3 : PERTE DE LA LIGNE N6–N9 ======================
+if exo5_3:
+    print("\n=== Exo 5.3 : Perte de la ligne N6–N9 – Load Flow pandapower ===")
+
+    # 1) Copier le réseau de référence
+    net_mod = copy.deepcopy(net)
+
+    # 2) Mettre la ligne N6–N9 hors service
+    # (nom exact d’après ta création : "'N6N9")
+    idx_line = net_mod.line.index[net_mod.line['name'] == "'N6N9"][0]
+    net_mod.line.at[idx_line, 'in_service'] = False
+
+    # 3) Lancer le load flow
+    try:
+        pp.runpp(net_mod, algorithm='nr',
+                 calculate_voltage_angles=True,
+                 enforce_q_lims=True,
+                 run_control=True)
+        converged = True
+    except Exception as e:
+        converged = False
+        print("\n>>> Le load flow ne converge pas :", e)
+
+    if converged:
+        # 4) Résultats modifiés
+        bus_mod = net_mod.res_bus[['vm_pu', 'va_degree']].copy()
+        bus_mod.insert(0, 'name', net_mod.bus['name'].values)
+        bus_mod_num = bus_mod.set_index('name')[['vm_pu', 'va_degree']]
+
+        line_mod = net_mod.res_line[['loading_percent', 'p_from_mw', 'q_from_mvar']].copy()
+        line_mod.insert(0, 'name', net_mod.line['name'].values)
+        line_mod.insert(1, 'from_bus', net_mod.line['from_bus'].map(net_mod.bus['name']).values)
+        line_mod.insert(2, 'to_bus',   net_mod.line['to_bus'].map(net_mod.bus['name']).values)
+        line_mod_num = line_mod.set_index('name')[['loading_percent', 'p_from_mw', 'q_from_mvar']]
+
+        gen_mod = net_mod.res_gen[['p_mw', 'q_mvar', 'vm_pu']].copy()
+        gen_mod.insert(0, 'name', net_mod.gen['name'].values)
+        gen_mod_num = gen_mod.set_index('name')[['p_mw', 'q_mvar', 'vm_pu']]
+
+        # 5) Δ = mod - ref
+        bus_delta  = bus_mod_num  - bus_ref_num
+        line_delta = line_mod_num - line_ref_num
+        gen_delta  = gen_mod_num  - gen_ref_num
+
+        # 6) Affichages
+        print("\n=== BUS – Modifié (ligne N6–N9 perdue) ===")
+        print(bus_mod)
+
+        print("\n=== LIGNES – Modifié (ligne N6–N9 perdue) ===")
+        print(line_mod)
+
+        print("\n=== GÉNÉRATEURS – Modifié (ligne N6–N9 perdue) ===")
+        print(gen_mod)
+
+        print("\n=== BUS – Variation (mod - ref) ===")
+        print(bus_delta)
+
+        print("\n=== LIGNES – Variation (mod - ref) ===")
+        print(line_delta)
+
+        print("\n=== GÉNÉRATEURS – Variation (mod - ref) ===")
+        print(gen_delta)
+    else:
+        print("\n=== AUCUN ÉTAT STATIONNAIRE TROUVÉ (perte N6–N9) ===")
+
+# ====================== EXO 5.4 : PERTE DE LA LIGNE N105–N205 ======================
+if exo5_4:
+    print("\n=== Exo 5.4 : Perte de la ligne N105–N205 – Load Flow pandapower ===")
+
+    # 1) Copier le réseau de référence
+    net_mod = copy.deepcopy(net)
+
+    # 2) Mettre la ligne N105–N205 hors service
+    # attention au nom exact de la ligne/trafo : ici "'N205N105'"
+    idx_el = net_mod.trafo.index[net_mod.trafo['name'] == "'N205N105'"][0]
+    net_mod.trafo.at[idx_el, 'in_service'] = False
+
+    # 3) Lancer le load flow
+    try:
+        pp.runpp(net_mod, algorithm='nr',
+                 calculate_voltage_angles=True,
+                 enforce_q_lims=True,
+                 run_control=True)
+        converged = True
+    except Exception as e:
+        converged = False
+        print("\n>>> Le load flow ne converge pas :", e)
+
+    if converged:
+        # 4) Résultats modifiés
+        bus_mod = net_mod.res_bus[['vm_pu', 'va_degree']].copy()
+        bus_mod.insert(0, 'name', net_mod.bus['name'].values)
+        bus_mod_num = bus_mod.set_index('name')[['vm_pu', 'va_degree']]
+
+        line_mod = net_mod.res_line[['loading_percent', 'p_from_mw', 'q_from_mvar']].copy()
+        line_mod.insert(0, 'name', net_mod.line['name'].values)
+        line_mod.insert(1, 'from_bus', net_mod.line['from_bus'].map(net_mod.bus['name']).values)
+        line_mod.insert(2, 'to_bus',   net_mod.line['to_bus'].map(net_mod.bus['name']).values)
+        line_mod_num = line_mod.set_index('name')[['loading_percent', 'p_from_mw', 'q_from_mvar']]
+
+        gen_mod = net_mod.res_gen[['p_mw', 'q_mvar', 'vm_pu']].copy()
+        gen_mod.insert(0, 'name', net_mod.gen['name'].values)
+        gen_mod_num = gen_mod.set_index('name')[['p_mw', 'q_mvar', 'vm_pu']]
+
+        # 5) Δ = mod - ref
+        bus_delta  = bus_mod_num  - bus_ref_num
+        line_delta = line_mod_num - line_ref_num
+        gen_delta  = gen_mod_num  - gen_ref_num
+
+        # 6) Affichages
+        print("\n=== BUS – Modifié (N105–N205 perdu) ===")
+        print(bus_mod)
+
+        print("\n=== LIGNES – Modifié (N105–N205 perdu) ===")
+        print(line_mod)
+
+        print("\n=== GÉNÉRATEURS – Modifié (N105–N205 perdu) ===")
+        print(gen_mod)
+
+        print("\n=== BUS – Variation (mod - ref) ===")
+        print(bus_delta)
+
+        print("\n=== LIGNES – Variation (mod - ref) ===")
+        print(line_delta)
+
+        print("\n=== GÉNÉRATEURS – Variation (mod - ref) ===")
+        print(gen_delta)
+    else:
+        print("\n=== AUCUN ÉTAT STATIONNAIRE TROUVÉ (perte N105–N205) ===")
+# =================================================================
+
