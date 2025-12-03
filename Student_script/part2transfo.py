@@ -247,7 +247,7 @@ if exo2_1:
 
 
 
- # ---------- 2.2) ÉTAT AVEC TRANSFO N6–N104 MODIFIÉ ----------
+ # ---------- 2.2) ÉTAT AVEC Ratio TRANSFO N6–N104 MODIFIÉ ----------
 if exo2_2:
     print("\n=== Exo 2.2 ===")
 
@@ -256,13 +256,13 @@ if exo2_2:
     # trouver l’index du transfo N6N104
     idx_t = net_mod.trafo.index[net_mod.trafo['name'] == 'N6N104'][0]
 
-    # modifier le rapport nominal : 380/150 -> 380/165
-    net_mod.trafo.at[idx_t, 'vn_hv_kv'] = 380.0
-    net_mod.trafo.at[idx_t, 'vn_lv_kv'] = 165.0
-    # on laisse tap_pos = 2 inchangé
+    # modifier le rapport via les taps : +10 % (tap_step_percent = 1 % -> tap_pos = 10)
+    net_mod.trafo.at[idx_t, 'tap_pos'] = 10    # au lieu de jouer sur vn_lv_kv
 
+    # lancer le power flow
     pp.runpp(net_mod, algorithm='nr', calculate_voltage_angles=True)
 
+    # résultats modifiés
     bus_mod  = net_mod.res_bus[['vm_pu', 'va_degree']].copy()
     bus_mod.insert(0, 'name', net_mod.bus['name'].values)
 
@@ -273,6 +273,7 @@ if exo2_2:
 
     gen_mod  = net_mod.res_gen[['p_mw', 'q_mvar', 'vm_pu']].copy()
     gen_mod.insert(0, 'name', net_mod.gen['name'].values)
+
 
 
     # ---------- 3) TABLEAUX COMPARATIFS (Δ = mod - ref) ----------
@@ -369,22 +370,22 @@ if exo2_3:
     print("\n=== GÉNÉRATEURS – Variation (mod - ref) ===")
     print(gen_delta)
 
-# ---------- 2.4.1) ÉTAT AVEC TRANSFO N2–N107 MODIFIÉ ----------
+# ---------- 2.4.1) ÉTAT AVEC Ratio TRANSFO N2–N107 MODIFIÉ ----------
 if exo2_4_1:
-    print("\n=== Exo 2.4.1 ===")
+    print("\n=== Exo 2.2 ===")
 
     net_mod = copy.deepcopy(net)
 
     # trouver l’index du transfo N6N104
     idx_t = net_mod.trafo.index[net_mod.trafo['name'] == 'N2N107'][0]
 
-    # modifier le rapport nominal : 380/150 -> 380/165
-    net_mod.trafo.at[idx_t, 'vn_hv_kv'] = 380.0
-    net_mod.trafo.at[idx_t, 'vn_lv_kv'] = 165.0
-    # on laisse tap_pos = 2 inchangé
+    # modifier le rapport via les taps : +10 % (tap_step_percent = 1 % -> tap_pos = 10)
+    net_mod.trafo.at[idx_t, 'tap_pos'] = 10    # au lieu de jouer sur vn_lv_kv
 
+    # lancer le power flow
     pp.runpp(net_mod, algorithm='nr', calculate_voltage_angles=True)
 
+    # résultats modifiés
     bus_mod  = net_mod.res_bus[['vm_pu', 'va_degree']].copy()
     bus_mod.insert(0, 'name', net_mod.bus['name'].values)
 
@@ -395,7 +396,6 @@ if exo2_4_1:
 
     gen_mod  = net_mod.res_gen[['p_mw', 'q_mvar', 'vm_pu']].copy()
     gen_mod.insert(0, 'name', net_mod.gen['name'].values)
-
 
     # ---------- 3) TABLEAUX COMPARATIFS (Δ = mod - ref) ----------
 
