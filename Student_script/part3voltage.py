@@ -164,3 +164,130 @@ Display the results you need
 Enforce the reactive power limits 
 
 """
+# Run power flow
+pp.runpp(net, algorithm='nr', calculate_voltage_angles=True)
+
+# Display results
+print("\n=== Power Flow Results (with all shunts) ===")
+print(f"\nConverged: {net.converged}")
+if net.converged:
+    print("\nBus Voltages (pu):")
+    bus_results = net.res_bus[['vm_pu', 'va_degree']].copy()
+    bus_results.insert(0, 'bus', net.bus['name'].values)
+    print(bus_results)
+    print("\nLine Loading (%):")
+    # Include line name and bus connections for identification
+    line_results = net.res_line[['loading_percent', 'p_from_mw', 'q_from_mvar']].copy()
+    line_results.insert(0, 'name', net.line['name'].values)
+    line_results.insert(1, 'from_bus', net.line['from_bus'].map(net.bus['name']).values)
+    line_results.insert(2, 'to_bus', net.line['to_bus'].map(net.bus['name']).values)
+    print(line_results)
+    print("\nGenerator Results:")
+    gen_results = net.res_gen[['p_mw', 'q_mvar', 'vm_pu']].copy()
+    gen_results.insert(0, 'name', net.gen['name'].values)
+    print(gen_results)
+
+    # Store base-case results for later comparison
+    bus_before = net.res_bus[['vm_pu', 'va_degree']].copy()
+    line_before = net.res_line[['loading_percent', 'p_from_mw', 'q_from_mvar']].copy()
+    gen_before = net.res_gen[['p_mw', 'q_mvar', 'vm_pu']].copy()
+else:
+    print("Power flow did not converge!")
+    bus_before = None
+    line_before = None
+    gen_before = None
+
+
+# # Sweep M1 voltage setpoint and show ALL generator results
+# vm_start = 0.90
+# vm_end   = 1.10
+# vm_step  = 0.05
+
+# original_vm = net.gen.at[G1, "vm_pu"]
+
+# vm = vm_start
+# while vm <= vm_end + 1e-6:
+#     # set new voltage setpoint for M1
+#     net.gen.at[G1, "vm_pu"] = vm
+
+#     # run power flow
+#     pp.runpp(net, algorithm="nr", calculate_voltage_angles=True, enforce_q_lims=True)
+
+#     print(f"\n=== M1 vm_pu setpoint = {vm:.3f} ===")
+#     print("Gen   P_MW      Q_Mvar    vm_pu")
+#     for idx, gen_row in net.gen.iterrows():
+#         name = gen_row["name"]
+#         p = net.res_gen.at[idx, "p_mw"]
+#         q = net.res_gen.at[idx, "q_mvar"]
+#         v = net.res_gen.at[idx, "vm_pu"]
+#         print(f"{name:4s} {p:9.1f} {q:10.1f} {v:8.4f}")
+
+#     vm += vm_step
+
+# # restore original setpoint
+# net.gen.at[G1, "vm_pu"] = original_vm
+
+# Find bus indices for all 150V buses (assume their names start with 'N10')
+n10_buses = net.bus[net.bus['name'].str.startswith('N10')].index
+
+# Find shunts connected to those buses
+shunt_to_drop = net.shunt[net.shunt['bus'].isin(n10_buses)].index
+
+# Drop those shunts from the net
+net.shunt.drop(shunt_to_drop, inplace=True)
+
+# Rerun power flow analysis
+pp.runpp(net, algorithm='nr', calculate_voltage_angles=True)
+
+print("\n=== After dropping shunt capacitors on 150V buses (N10...) ===")
+print(f"\nConverged: {net.converged}")
+if net.converged:
+    print("\nBus Voltages (pu):")
+    bus_results = net.res_bus[['vm_pu', 'va_degree']].copy()
+    bus_results.insert(0, 'bus', net.bus['name'].values)
+    print(bus_results)
+    print("\nLine Loading (%):")
+    line_results = net.res_line[['loading_percent', 'p_from_mw', 'q_from_mvar']].copy()
+    line_results.insert(0, 'name', net.line['name'].values)
+    line_results.insert(1, 'from_bus', net.line['from_bus'].map(net.bus['name']).values)
+    line_results.insert(2, 'to_bus', net.line['to_bus'].map(net.bus['name']).values)
+    print(line_results)
+    print("\nGenerator Results:")
+    gen_results = net.res_gen[['p_mw', 'q_mvar', 'vm_pu']].copy()
+    gen_results.insert(0, 'name', net.gen['name'].values)
+    print(gen_results)
+
+    # Compute and print differences (after - before), if base case was available
+    if bus_before is not None:
+        bus_after = net.res_bus[['vm_pu', 'va_degree']]
+        line_after = net.res_line[['loading_percent', 'p_from_mw', 'q_from_mvar']]
+        gen_after = net.res_gen[['p_mw', 'q_mvar', 'vm_pu']]
+
+        bus_diff = bus_after - bus_before
+        line_diff = line_after - line_before
+        gen_diff = gen_after - gen_before
+
+        print("\n=== Differences after removing shunts (after - before) ===")
+
+        # Add names to the difference tables
+        bus_diff_named = bus_diff.copy()
+        bus_diff_named.insert(0, 'bus', net.bus.loc[bus_diff.index, 'name'].values)
+
+        line_diff_named = line_diff.copy()
+        line_diff_named.insert(0, 'name', net.line.loc[line_diff.index, 'name'].values)
+        line_diff_named.insert(1, 'from_bus', net.line.loc[line_diff.index, 'from_bus'].map(net.bus['name']).values)
+        line_diff_named.insert(2, 'to_bus', net.line.loc[line_diff.index, 'to_bus'].map(net.bus['name']).values)
+
+        gen_diff_named = gen_diff.copy()
+        gen_diff_named.insert(0, 'name', net.gen.loc[gen_diff.index, 'name'].values)
+
+        print("\nBus voltage differences (pu, degrees):")
+        print(bus_diff_named)
+
+        print("\nLine loading and power flow differences (%, MW, Mvar):")
+        print(line_diff_named)
+
+        print("\nGenerator P/Q and voltage differences (MW, Mvar, pu):")
+        print(gen_diff_named)
+else:
+    print("Power flow did not converge after dropping shunt capacitors on 150V buses!")
