@@ -170,7 +170,6 @@ if net.converged:
     print("\nBus Voltages (pu):")
     print(net.res_bus[['vm_pu', 'va_degree']])
     print("\nLine Loading (%):")
-    # Include line name and bus connections for identification
     line_results = net.res_line[['loading_percent', 'p_from_mw', 'q_from_mvar']].copy()
     line_results.insert(0, 'name', net.line['name'].values)
     line_results.insert(1, 'from_bus', net.line['from_bus'].map(net.bus['name']).values)
@@ -240,7 +239,7 @@ print(f"\n=== Ligne {net.line.at[line_idx, 'name']} ===")
 print(f"\n--- Paramètres de base ---")
 print(f"Sbase: {Sbase_MVA} MVA")
 print(f"Vbase: {Vbase_kV} kV (ligne-ligne)")
-print(f"Zbase: {Zbase:.3f} Ω")
+print(f"Zbase: {Zbase:.3f} ohm")
 print(f"Ybase: {Ybase:.6f} S")
 
 print(f"\n--- Impédances de ligne ---")
@@ -338,12 +337,12 @@ print(f"Q_to (calcul):       {Q_to_calc:>10.4f} MVAr")
 print(f"Q_to (pandapower):   {Q_to_pp:>10.4f} MVAr")
 
 print(f"\n--- Bilan (Pertes) ---")
-print(f"ΔP (calcul):         {Delta_P_calc:>10.4f} MW")
-print(f"ΔP (pandapower):     {Delta_P_pp:>10.4f} MW")
+print(f"dP (calcul):         {Delta_P_calc:>10.4f} MW")
+print(f"dP (pandapower):     {Delta_P_pp:>10.4f} MW")
 print(f"Erreur:              {abs(Delta_P_calc - Delta_P_pp):>10.4f} MW")
 
-print(f"\nΔQ (calcul):         {Delta_Q_calc:>10.4f} MVAr")
-print(f"ΔQ (pandapower):     {Delta_Q_pp:>10.4f} MVAr")
+print(f"\ndQ (calcul):         {Delta_Q_calc:>10.4f} MVAr")
+print(f"dQ (pandapower):     {Delta_Q_pp:>10.4f} MVAr")
 print(f"Erreur:              {abs(Delta_Q_calc - Delta_Q_pp):>10.4f} MVAr")
 
 print(f"\n--- Interprétation ---")
@@ -353,11 +352,11 @@ else:
     print(f"-> Gain actif impossible: {Delta_P_calc:.4f} MW")
 
 if Delta_Q_calc > 0:
-    print(f"✓ Génération réactive nette: {Delta_Q_calc:.4f} MVAr (effet capacitif)")
+    print(f"Génération réactive nette: {Delta_Q_calc:.4f} MVAr (effet capacitif)")
 elif Delta_Q_calc < 0:
-    print(f"✓ Consommation réactive nette: {abs(Delta_Q_calc):.4f} MVAr (effet inductif)")
+    print(f"Consommation réactive nette: {abs(Delta_Q_calc):.4f} MVAr (effet inductif)")
 else:
-    print(f"✓ Pas de pertes/génération réactive nette")
+    print(f"Pas de pertes/génération réactive nette")
 
 print(f"\n--- Vérification physique ---")
 # Les pertes Joule théoriques
@@ -382,7 +381,7 @@ Vn_kV = net.bus.at[net.line.at[line_idx, 'from_bus'], 'vn_kv']  # 380 kV
 # ========================================
 
 # Impédance série par km (complexe)
-z_per_km = r_ohm_per_km + 1j * x_ohm_per_km  # Ω/km
+z_per_km = r_ohm_per_km + 1j * x_ohm_per_km  # ohm/km
 
 # Admittance shunt par km (complexe)
 # y_per_km = G + j*ω*C, avec G ≈ 0 (pas de conductance)
@@ -390,7 +389,7 @@ C_per_km_F = c_nf_per_km * 1e-9
 y_per_km = 1j * omega * C_per_km_F  # S/km
 
 # Impédance caractéristique (complex)
-Zc = np.sqrt(z_per_km / y_per_km)  # Ω
+Zc = np.sqrt(z_per_km / y_per_km)  # ohm
 
 print(f"\n--- Paramètres de ligne (par km) ---")
 print(f"z (série):   {abs(z_per_km):.3f} ∠ {np.angle(z_per_km, deg=True):.2f}° Ω/km")
@@ -602,7 +601,7 @@ print(f"φ_hv = arctan(Q/P) = {np.rad2deg(phi_hv):.3f}°")
 # angle(I) = angle(V) - angle(S)
 theta_I_hv = theta_hv_rad - phi_hv
 
-print(f"θ_I = θ_V - φ = {np.rad2deg(theta_I_hv):.3f}°")
+print(f"theta_I = theta_V - phi = {np.rad2deg(theta_I_hv):.3f}°")
 
 # Courant complexe (en kA)
 I_hv_complex = I_hv_ka * np.exp(1j * theta_I_hv)
@@ -673,7 +672,6 @@ print(f"Q_lv = {Q_lv_pp:.4f} MVAr")
 print(f"S_lv = {np.sqrt(P_lv_pp**2 + Q_lv_pp**2):.4f} MVA")
 print(f"I_lv = {I_lv_ka_pp:.4f} kA")
 
-# Calcul manuel : S_LV = √3 × V_LV × I_LV*
 V_lv_pu = net.res_bus.at[lv_bus, 'vm_pu']
 theta_lv_deg = net.res_bus.at[lv_bus, 'va_degree']
 theta_lv_rad = np.deg2rad(theta_lv_deg)
@@ -701,14 +699,12 @@ I_lv_complex = I_lv_ka_pp * np.exp(1j * theta_I_lv)
 print(f"\n--- Courant côté LV ---")
 print(f"I_lv = {abs(I_lv_complex):.4f} ∠ {np.rad2deg(np.angle(I_lv_complex)):.3f}° kA")
 
-# Calcul de S_LV = √3 × V_LV × I_LV*
 S_lv_complex = np.sqrt(3) * V_lv_complex * np.conj(I_lv_complex)
 
 P_lv_calc = S_lv_complex.real
 Q_lv_calc = S_lv_complex.imag
 S_lv_calc = abs(S_lv_complex)
 
-print(f"\n--- Calcul manuel : S_LV = √3 × V_LV × I_LV* ---")
 print(f"P_lv (calcul) = {P_lv_calc:.4f} MW")
 print(f"Q_lv (calcul) = {Q_lv_calc:.4f} MVAr")
 print(f"S_lv (calcul) = {S_lv_calc:.4f} MVA")
@@ -760,7 +756,6 @@ print(f"vk  = {vk_percent}%")
 print(f"R_pu = {R_pu:.6f} p.u. (sur base {sn_mva} MVA)")
 
 # Courant en p.u. (base : courant nominal du transformateur)
-# I_base = S_n / (√3 × V_n)
 I_base_hv = sn_mva / (np.sqrt(3) * vn_hv_kv)  # en kA
 I_hv_pu = I_hv_ka_pp / I_base_hv
 
@@ -769,13 +764,11 @@ print(f"I_base (HV) = {I_base_hv:.4f} kA")
 print(f"I_hv        = {I_hv_ka_pp:.4f} kA")
 print(f"I_hv_pu     = {I_hv_pu:.5f} p.u.")
 
-# Pertes cuivre : P_cu = 3 × I²_HV × R_eq
-# En p.u. : P_cu_pu = I²_pu × R_pu
 P_cu_pu = I_hv_pu**2 * R_pu
 P_cu_MW = P_cu_pu * sn_mva
 
 print(f"\n--- Pertes cuivre théoriques ---")
-print(f"P_cu = I²_pu × R_pu = {I_hv_pu:.5f}² × {R_pu:.6f}")
+print(f"P_cu = I²_pu x R_pu = {I_hv_pu:.5f}² × {R_pu:.6f}")
 print(f"P_cu = {P_cu_pu:.6f} p.u.")
 print(f"P_cu = {P_cu_MW:.4f} MW")
 
@@ -832,7 +825,7 @@ print(f"\n--- Cohérence des pertes ---")
 print(f"P_loss (calculé)      = {P_loss_calc:.4f} MW")
 print(f"P_cu (théorique)      = {P_cu_MW:.4f} MW")
 print(f"Différence            = {abs(P_loss_calc - P_cu_MW):.6f} MW")
-print(f"Cohérence (< 0.1 MW) : {'✓ OUI' if coherence else '✗ NON'}")
+print(f"Cohérence (< 0.1 MW) : {'OUI' if coherence else 'NON'}")
 
 # Interprétation des pertes réactives
 print(f"\n--- Puissance réactive ---")
@@ -912,15 +905,13 @@ print(f"--- COURANT CÔTÉ SECONDAIRE (LV) ---")
 # Données pandapower
 I_lv_ka_pp = net.res_trafo.at[trafo_idx, 'i_lv_ka']
 print(f"I_LV (pandapower) = {I_lv_ka_pp:.4f} kA")
-
-# Calcul manuel : I_LV = |S_LV| / (√3 × V_LV)
 S_lv_calc_MVA = np.sqrt(P_lv_calc**2 + Q_lv_calc**2)
 V_lv_kV = V_lv_pu * vn_lv_kv
 
 I_lv_calc_kA = S_lv_calc_MVA / (np.sqrt(3) * V_lv_kV)
 
-print(f"\n--- Calcul manuel : I_LV = |S_LV| / (√3 × V_LV) ---")
-print(f"|S_LV|      = √(P² + Q²) = √({P_lv_calc:.4f}² + {Q_lv_calc:.4f}²)")
+print(f"\n--- Calcul manuel ---")
+print(f"|S_LV|      = sqrt(P² + Q²) = √({P_lv_calc:.4f}² + {Q_lv_calc:.4f}²)")
 print(f"|S_LV|      = {S_lv_calc_MVA:.4f} MVA")
 print(f"V_LV        = {V_lv_pu:.5f} × {vn_lv_kv} = {V_lv_kV:.3f} kV")
 print(f"\nI_LV        = {S_lv_calc_MVA:.4f} / (√3 × {V_lv_kV:.3f})")
@@ -942,11 +933,7 @@ print(f"--- COURANTS NOMINAUX ---")
 
 # Puissance nominale du transformateur
 S_n_MVA = sn_mva
-
-# Courant nominal côté HV : I_rated_HV = S_n / (√3 × V_nom_HV)
 I_rated_hv_kA = S_n_MVA / (np.sqrt(3) * vn_hv_kv)
-
-# Courant nominal côté LV : I_rated_LV = S_n / (√3 × V_nom_LV)
 I_rated_lv_kA = S_n_MVA / (np.sqrt(3) * vn_lv_kv)
 
 print(f"\nPuissance nominale : S_n = {S_n_MVA} MVA")
@@ -1041,28 +1028,6 @@ print(f"{'Courant nominal (kA)':<30} {I_rated_hv_kA:>20.4f} {I_rated_lv_kA:>20.4
 print(f"{'Facteur de charge (%)':<30} {loading_hv_calc:>20.2f} {loading_lv_calc:>20.2f}")
 print(f"{'='*70}")
 
-# ========================================
-# G. INTERPRÉTATION
-# ========================================
-
-print(f"\n{'='*60}")
-print(f"INTERPRÉTATION")
-print(f"{'='*60}")
-
-print(f"\n--- État du transformateur ---")
-if loading_hv_calc < 80:
-    print(f"Le transformateur est faiblement chargé ({loading_hv_calc:.1f}%)")
-    print("Fonctionnement confortable, marge importante")
-elif loading_hv_calc < 100:
-    print(f"Le transformateur fonctionne normalement ({loading_hv_calc:.1f}%)")
-    print("Charge acceptable, encore de la marge")
-elif loading_hv_calc < 110:
-    print(f"Le transformateur est fortement chargé ({loading_hv_calc:.1f}%)")
-    print("Proche de la limite, surveillance recommandée")
-else:
-    print(f"SURCHARGE ! Le transformateur dépasse sa capacité ({loading_hv_calc:.1f}%)")
-    print("Risque de surchauffe, action corrective nécessaire")
-print(f"\n{'='*60}\n")
 
 # ========================================
 # Q1.8 : FACTEUR DE PUISSANCE AU NOEUD Ne
@@ -1135,11 +1100,11 @@ phi_without_deg = np.rad2deg(phi_without_rad)
 print(f"\n--- Calcul ---")
 print(f"P_net = {P_net_without:.2f} MW")
 print(f"Q_net = {Q_net_without:.2f} MVAr")
-print(f"S_net = √(P² + Q²) = √({P_net_without:.2f}² + {Q_net_without:.2f}²)")
+print(f"S_net = sqrt(P² + Q²) = √({P_net_without:.2f}² + {Q_net_without:.2f}²)")
 print(f"S_net = {S_net_without:.2f} MVA")
 print(f"\nPF = P / S = {P_net_without:.2f} / {S_net_without:.2f}")
 print(f"PF (sans compensation) = {PF_without:.4f}")
-print(f"Angle φ = arctan(Q/P) = {phi_without_deg:.2f}°")
+print(f"Angle phi = arctan(Q/P) = {phi_without_deg:.2f}°")
 
 # Nature de la charge
 nature_without = "inductif (en retard)" if Q_net_without > 0 else "capacitif (en avance)"
@@ -1179,11 +1144,11 @@ else:
     print(f"Q_net = Q_load + Q_shunt")
     print(f"Q_net = {Q_load_MVAr:.2f} + ({Q_shunt_MVAr:.2f})")
     print(f"Q_net = {Q_net_with:.2f} MVAr")
-    print(f"\nS_net = √(P² + Q²) = √({P_net_with:.2f}² + {Q_net_with:.2f}²)")
+    print(f"\nS_net = sqrt(P² + Q²) = √({P_net_with:.2f}² + {Q_net_with:.2f}²)")
     print(f"S_net = {S_net_with:.2f} MVA")
     print(f"\nPF = P / S = {P_net_with:.2f} / {S_net_with:.2f}")
     print(f"PF (avec compensation) = {PF_with:.4f}")
-    print(f"Angle φ = arctan(Q/P) = {phi_with_deg:.2f}°")
+    print(f"Angle phi = arctan(Q/P) = {phi_with_deg:.2f}°")
     
     # Nature de la charge
     nature_with = "inductif (en retard)" if Q_net_with > 0 else "capacitif (en avance)"
@@ -1220,9 +1185,9 @@ if has_shunt:
     reduction_S_pct = (delta_S / S_net_without) * 100
     
     print(f"\n--- Effet de la compensation ---")
-    print(f"Δ PF = {delta_PF:+.4f} ({improvement_pct:+.2f}%)")
-    print(f"Δ Q  = {delta_Q:+.2f} MVAr ({reduction_Q_pct:+.2f}%)")
-    print(f"Δ S  = {delta_S:+.2f} MVA ({reduction_S_pct:+.2f}%)")
+    print(f"PF = {delta_PF:+.4f} ({improvement_pct:+.2f}%)")
+    print(f"dQ  = {delta_Q:+.2f} MVAr ({reduction_Q_pct:+.2f}%)")
+    print(f"dS  = {delta_S:+.2f} MVA ({reduction_S_pct:+.2f}%)")
     
     if delta_PF > 0:
         print(f"\nLe compensateur shunt AMÉLIORE le facteur de puissance")
@@ -1249,9 +1214,6 @@ print(f"Tension : {V_bus_pu:.5f} p.u.")
 print(f"P_bus   : {P_bus_MW:.2f} MW")
 print(f"Q_bus   : {Q_bus_MVAr:.2f} MVAr")
 
-# Note : P_bus et Q_bus incluent déjà l'effet du shunt et de la charge
-# Ils représentent la puissance NETTE injectée/soutirée au nœud
-
 S_bus_MVA = np.sqrt(P_bus_MW**2 + Q_bus_MVAr**2)
 PF_bus = abs(P_bus_MW) / S_bus_MVA if S_bus_MVA != 0 else 0
 
@@ -1261,63 +1223,4 @@ print(f"PF_bus  : {PF_bus:.4f}")
 print(f"\nNote : Les résultats pandapower incluent tous les éléments")
 print(f"connectés au bus (charge + shunt + flux réseaux)")
 
-# ========================================
-# F. INTERPRÉTATION PHYSIQUE
-# ========================================
 
-print(f"\n{'='*60}")
-print(f"--- INTERPRÉTATION PHYSIQUE ---")
-print(f"{'='*60}")
-
-print(f"\n1. Sans compensation :")
-print(f"   - La charge consomme P = {P_load_MW:.2f} MW")
-print(f"   - La charge consomme Q = {Q_load_MVAr:.2f} MVAr (énergie réactive)")
-print(f"   - Facteur de puissance : {PF_without:.4f}")
-print(f"   - Nature : charge {nature_without}")
-
-if has_shunt and Q_shunt_MVAr < 0:
-    print(f"\n2. Avec compensation capacitive :")
-    print(f"   - Le condensateur GÉNÈRE {abs(Q_shunt_MVAr):.2f} MVAr")
-    print(f"   - Cela compense partiellement la consommation réactive de la charge")
-    print(f"   - Q_net réduit à {Q_net_with:.2f} MVAr")
-    print(f"   - Facteur de puissance amélioré : {PF_with:.4f}")
-    print(f"\n   Avantages :")
-    print(f"   Réduction des pertes dans le réseau")
-    print(f"   Réduction de la puissance apparente transportée")
-    print(f"   Meilleur profil de tension")
-    print(f"   Réduction des coûts (pénalités d'énergie réactive)")
-
-elif has_shunt and Q_shunt_MVAr > 0:
-    print(f"\n2. Avec compensation inductive :")
-    print(f"   - L'inductance ABSORBE {abs(Q_shunt_MVAr):.2f} MVAr")
-    print(f"   - Utilisé en cas de charge capacitive ou faible charge")
-
-print(f"\n{'='*60}\n")
-
-# ========================================
-# G. CALCUL INDÉPENDANT DU LOAD FLOW
-# ========================================
-
-print(f"\n{'='*60}")
-print(f"--- NOTE IMPORTANTE (Question 3.3) ---")
-print(f"{'='*60}")
-
-print(f"""
-Le facteur de puissance d'un nœud doit pouvoir être calculé 
-SANS lancer un load flow, car il caractérise la configuration 
-du réseau (charge + compensation), pas le point de fonctionnement.
-
-Formule générale :
-    PF = P_load / √(P_load² + (Q_load + Q_shunt)²)
-
-Cette valeur est indépendante :
-- De la production des générateurs
-- Du point de fonctionnement du réseau
-- Des tensions aux bus
-
-Elle ne dépend que de :
-- La puissance de la charge (P, Q)
-- La compensation shunt (Q_shunt)
-""")
-
-print(f"{'='*60}\n")

@@ -5,6 +5,16 @@ import pandapower.plotting as plot
 from pandapower.plotting.plotly import pf_res_plotly
 from pandapower.plotting.plotly import simple_plotly
 import pandapower.control as ct
+
+import pandas as pd
+
+###################################
+# CONDITIONS POUR LECTURE DU CODE #
+###################################
+
+CondQ4_1 = True
+CondQ4_2 = True
+
 net = pp.create_empty_network(f_hz=50, sn_mva=100)
     
 vmin = 0.95
@@ -147,3 +157,124 @@ ct.controller.trafo.DiscreteTapControl.DiscreteTapControl(net,16, 1.01,1.021, or
 ct.controller.trafo.DiscreteTapControl.DiscreteTapControl(net,17, 1.01,1.021, order = 0)
 ct.controller.trafo.DiscreteTapControl.DiscreteTapControl(net,18, 1.01,1.021, order = 0)
 
+
+def get_all_generator_power(net):
+    """Extrait la production active (p_mw) pour tous les générateurs par nom."""
+    gen_names = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'N12', 'N14']
+    results = net.res_gen.merge(net.gen[['name', 'bus']], left_index=True, right_index=True)
+    results = results[results['name'].isin(gen_names)].set_index('name')
+    production_data = results.loc[gen_names]['p_mw'].T
+    
+    return production_data
+
+target_load_name = "N204"
+target_gen_name = "N14"
+added_load_mw = 100.0
+# pour stabiliser la convergence
+damping_factor = 1 
+
+print(f"--- ANALYSE PARTIE 4 pour Charge {target_load_name} (+{added_load_mw} MW) et Générateur {target_gen_name} ---")
+
+try:
+    bus_of_load_idx = net.bus.index[net.bus.name == target_load_name].values[0]
+    load_idx = net.load.index[net.load.bus == bus_of_load_idx].values[0]
+    gen_idx = net.gen.index[net.gen.name == target_gen_name].values[0]
+    slack_idx = net.gen[net.gen.slack == True].index[0]
+except IndexError as e:
+    print(f"Erreur de configuration : {e}")
+    exit()
+
+# --- ETAT INITIAL ---
+# On s'assure que le réseau est dans son état initial
+net.load.at[load_idx, "p_mw"] = 360.0 # P_initial de N204
+p_gen_initial = 174.0 # P_initial de N14
+net.gen.at[gen_idx, "p_mw"] = p_gen_initial
+
+pp.runpp(net, enforce_q_lims=False)
+p_initial = get_all_generator_power(net)
+# Sauvegarde de l'état du Slack (M6) et des flux de référence
+p_slack_ref = net.res_gen.at[slack_idx, "p_mw"]
+losses_ref = net.res_line.pl_mw.sum() + net.res_trafo.pl_mw.sum()
+flow_line_ref = net.res_line.p_from_mw.copy()
+flow_trafo_ref = net.res_trafo.p_hv_mw.copy()
+pl_line_ref = net.res_line.pl_mw.copy()
+pl_trafo_ref = net.res_trafo.pl_mw.copy()
+
+
+print(f"\nÉtat Initial - P_Slack (M6): {p_slack_ref:.4f} MW")
+print(f"État Initial - Pertes Totales: {losses_ref:.4f} MW")
+
+# --- BOUCLE ITERATIVE (Q 4.1 : Détermination des pertes marginales) ---
+
+added_power = added_load_mw # Estimation initiale : 100 MW
+tolerance = 0.00001           
+
+print("\n--- Recherche de l'équilibre (Compensation des pertes) ---")
+
+# Modification permanente de la charge (+100 MW)
+net.load.at[load_idx, "p_mw"] += added_load_mw
+
+for i in range(50):
+    net.gen.at[gen_idx, "p_mw"] = p_gen_initial + added_power
+    
+    try:
+        pp.runpp(net, enforce_q_lims=False)
+        p_final = get_all_generator_power(net)
+    except:
+        print(f"ATTENTION: Load Flow non convergé à l'itération {i+1}")
+        break 
+        
+    p_slack_curr = net.res_gen.at[slack_idx, "p_mw"]
+    diff = p_slack_curr - p_slack_ref # Ce que le slack produit EN TROP
+    correction = diff * damping_factor 
+    added_power += correction 
+    
+    print(f"Iter {i+1}: Ajout Gen = {p_gen_initial + added_power:.4f} MW | Ecart Slack = {diff:.4f} MW | Correction = {correction:.4f} MW")
+    
+    if abs(diff) < tolerance:
+        print("-> Convergence atteinte.")
+        break
+
+
+if CondQ4_1:
+    losses_final = net.res_line.pl_mw.sum() + net.res_trafo.pl_mw.sum()
+    delta_losses = losses_final - losses_ref
+    p_gen_final = net.gen.at[gen_idx, 'p_mw']
+
+    print("REPONSE QUESTION 4.1")
+    print(f"Production initiale de {target_gen_name}: {p_gen_initial:.4f} MW")
+    print(f"Production finale de {target_gen_name}: {p_gen_final:.4f} MW")
+    print(f"Delta de production requis (P_supplémentaire): {p_gen_final - p_gen_initial:.4f} MW")
+    print(f"  Dont couverture de la charge: {added_load_mw:.2f} MW")
+    print(f"  Pertes marginales induites: {delta_losses:.4f} MW")
+    print(f"Vérification: Ecart de production = {abs(p_gen_final - p_gen_initial - added_load_mw - delta_losses):.4f} MW (doit être proche de 0)")
+
+if CondQ4_2:
+    print("REPONSE QUESTION 4.2")
+    print(f"Branche (De -> Vers) | Flux Add. P_From (MW) | Pertes Add. (MW)")
+
+    # Lignes
+    for idx in net.line.index:
+        d_flow = net.res_line.at[idx, 'p_from_mw'] - flow_line_ref.loc[idx]
+        d_pl = net.res_line.at[idx, 'pl_mw'] - pl_line_ref.loc[idx]
+        
+        name = net.line.at[idx, 'name'].strip("'")
+        from_b = net.bus.at[net.line.at[idx, 'from_bus'], 'name']
+        to_b = net.bus.at[net.line.at[idx, 'to_bus'], 'name']
+        print(f"Ligne {name} ({from_b}->{to_b}): {d_flow:+.2f} MW | {d_pl:+.4f} MW")
+
+    # Transformateurs
+    for idx in net.trafo.index:
+        d_flow = net.res_trafo.at[idx, 'p_hv_mw'] - flow_trafo_ref.loc[idx]
+        d_pl = net.res_trafo.at[idx, 'pl_mw'] - pl_trafo_ref.loc[idx]
+
+        if abs(d_flow) > 1.0:
+            name = net.trafo.at[idx, 'name'].strip("'")
+            hv_b = net.bus.at[net.trafo.at[idx, 'hv_bus'], 'name']
+            lv_b = net.bus.at[net.trafo.at[idx, 'lv_bus'], 'name']
+            print(f"Trafo {name} ({hv_b}->{lv_b}): {d_flow:+.2f} MW | {d_pl:+.4f} MW")
+
+    df_report = pd.DataFrame({
+        'Active Power (MW) - Initial': p_initial,
+        'Active Power (MW) - Final': p_final
+    }).T # Transposition pour avoir les générateurs en colonnes
