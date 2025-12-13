@@ -1,10 +1,15 @@
 import pandapower as pp 
-from pandapower.control.controller.trafo.ContinuousTapControl import ContinuousTapControl
 import pandapower.topology as top
 import pandapower.plotting as plot
 from pandapower.plotting.plotly import pf_res_plotly
 from pandapower.plotting.plotly import simple_plotly
 import pandapower.control as ct
+
+# Conditions pour meilleure lecture du code 
+Cond6_3_1 = False
+Cond6_3_2 = True
+plot_6_3 = False
+
 net = pp.create_empty_network(f_hz=50, sn_mva=100)
     
 vmin = 0.9
@@ -128,6 +133,9 @@ pp.create_transformer_from_parameters(net, hv_bus=N105, lv_bus=N205, sn_mva=500.
 pp.create_transformer_from_parameters(net, hv_bus=N106, lv_bus=N206, sn_mva=500.0, name="'N206N106'", vn_hv_kv=150.0, vn_lv_kv=15.0, vkr_percent=0.277, vk_percent=11.53832544176147, pfe_kw=0, i0_percent=0.0, tap_pos=0, tap_neutral=0, tap_step_percent=1.0, tap_side="lv", tap_min=-4, tap_max=20, in_service=True,max_loading_percent = load_max)
 pp.create_transformer_from_parameters(net, hv_bus=N107, lv_bus=N207, sn_mva=500.0, name="'N207N107'", vn_hv_kv=150.0, vn_lv_kv=15.0, vkr_percent=0.277, vk_percent=11.53832544176147, pfe_kw=0, i0_percent=0.0, tap_pos=0, tap_neutral=0, tap_step_percent=1.0, tap_side="lv", tap_min=-4, tap_max=20, in_service=True,max_loading_percent = load_max)
 
+
+pp.create_ext_grid(net, bus=N6, vm_pu=1.0, name="SlackHV")
+
 # list of Generators:
 G1 = pp.create_gen(net, p_mw=700.0, max_q_mvar=638.58, min_q_mvar=-250.0, sn_mva=1000.0, bus=M1, vm_pu=0.99958, name="M1", slack=False, in_service=True, min_p_mw=0., max_p_mw=850., controllable = True)
 G2 = pp.create_gen(net, p_mw=600.0, max_q_mvar=696.53, min_q_mvar=-250.0, sn_mva=1000.0, bus=M2, vm_pu=0.99958, name="M2", slack=False, in_service=True, min_p_mw=0., max_p_mw=850., controllable = True)
@@ -138,14 +146,6 @@ G6=pp.create_gen(net, p_mw=804.0, max_q_mvar=572.16, min_q_mvar=-250.0, sn_mva=1
 G7=pp.create_gen(net, p_mw=255.0, max_q_mvar=9999.0, min_q_mvar=-999.0, sn_mva=1000.0, bus=N12, vm_pu=1.0994, name="N12", slack=False, in_service=True, min_p_mw=0., max_p_mw=5000., controllable = True)
 G8=pp.create_gen(net, p_mw=174.0, max_q_mvar=9999.0, min_q_mvar=-999.0, sn_mva=1000.0, bus=N14, vm_pu=1.0929, name="N14", slack=False, in_service=True, min_p_mw=0., max_p_mw=2450., controllable = True)
 
-# Controllers :
-ct.controller.trafo.DiscreteTapControl.DiscreteTapControl(net,12, 1.01,1.021, order = 0)
-ct.controller.trafo.DiscreteTapControl.DiscreteTapControl(net,13, 1.01,1.021, order = 0)
-ct.controller.trafo.DiscreteTapControl.DiscreteTapControl(net,14, 1.01,1.021, order = 0)
-ct.controller.trafo.DiscreteTapControl.DiscreteTapControl(net,15, 1.01,1.021, order = 0)
-ct.controller.trafo.DiscreteTapControl.DiscreteTapControl(net,16, 1.01,1.021, order = 0)
-ct.controller.trafo.DiscreteTapControl.DiscreteTapControl(net,17, 1.01,1.021, order = 0)
-ct.controller.trafo.DiscreteTapControl.DiscreteTapControl(net,18, 1.01,1.021, order = 0)
 
 
 """
@@ -154,3 +154,103 @@ Create the constraints here
 Launch the right routine too
 
 """
+if Cond6_3_1 == True:
+    pp.create_poly_cost(net, 0, et="gen", cp2_eur_per_mw2=0.001, 
+                        cp1_eur_per_mw=-0.7, cp0_eur=142.5)
+    pp.create_poly_cost(net, 1, et="gen", cp2_eur_per_mw2=4.622 * 10**-4, 
+                        cp1_eur_per_mw=-0.34665, cp0_eur=89.996875)
+    pp.create_poly_cost(net, 2, et="gen", cp2_eur_per_mw2=5.625 * 10**-4, 
+                        cp1_eur_per_mw=-0.45, cp0_eur=120)
+    pp.create_poly_cost(net, 3, et="gen", cp2_eur_per_mw2=9.876 * 10**-5, 
+                        cp1_eur_per_mw=-0.088884, cp0_eur=59.9989)
+    pp.create_poly_cost(net, 4, et="gen", cp2_eur_per_mw2=2.8 * 10**-4, 
+                        cp1_eur_per_mw=-0.28, cp0_eur=80)
+    pp.create_poly_cost(net, 5, et="gen", cp2_eur_per_mw2=2.81 * 10**-4, 
+                        cp1_eur_per_mw=-0.3091, cp0_eur=90.0025)
+    pp.create_poly_cost(net, 6, et="gen", cp2_eur_per_mw2=3.04 * 10**-5, 
+                        cp1_eur_per_mw=-0.03496, cp0_eur=25.051)
+    pp.create_poly_cost(net, 7, et="gen", cp2_eur_per_mw2=5.555 * 10**-4, 
+                        cp1_eur_per_mw=-0.6666, cp0_eur=234.98)
+
+    # runopp résout le problème pour minimiser le coût total.
+    pp.runopp(net)
+
+
+    print("\n--- RÉSULTATS OPF (Q 6.3.1) ---")
+    print("Production optimale (MW) et coût total:")
+    print(net.res_gen[['p_mw']])
+    # Calcul du cout pour chaque générateur
+    for gen_idx in net.gen.index:
+        p = net.res_gen.at[gen_idx, 'p_mw']
+        cost = (net.poly_cost.at[gen_idx, 'cp2_eur_per_mw2'] * p**2 +
+                net.poly_cost.at[gen_idx, 'cp1_eur_per_mw'] * p +
+                net.poly_cost.at[gen_idx, 'cp0_eur'])
+        net.res_gen.at[gen_idx, 'cost_eur_per_h'] = cost
+    print(f"\nCoût de production par générateur (EUR/h):")
+    print(net.res_gen[['cost_eur_per_h']])
+    print(f"Coût de production total optimal : {net.res_cost:} EUR/h")
+
+
+if Cond6_3_2 == True:
+    print("\n--- RÉSULTATS OPF AVEC MEILLEURS AGENCY DES COST FUNCTIONS (Q 6.3.2) ---")
+    pp.create_poly_cost(net, 4, et="gen", cp2_eur_per_mw2=0.001, 
+                        cp1_eur_per_mw=-0.7, cp0_eur=142.5)
+    pp.create_poly_cost(net, 5, et="gen", cp2_eur_per_mw2=4.622 * 10**-4, 
+                        cp1_eur_per_mw=-0.34665, cp0_eur=89.996875)
+    pp.create_poly_cost(net, 2, et="gen", cp2_eur_per_mw2=5.625 * 10**-4, 
+                        cp1_eur_per_mw=-0.45, cp0_eur=120)
+    pp.create_poly_cost(net, 3, et="gen", cp2_eur_per_mw2=9.876 * 10**-5, 
+                        cp1_eur_per_mw=-0.088884, cp0_eur=59.9989)
+    pp.create_poly_cost(net, 0, et="gen", cp2_eur_per_mw2=2.8 * 10**-4, 
+                        cp1_eur_per_mw=-0.28, cp0_eur=80)
+    pp.create_poly_cost(net, 1, et="gen", cp2_eur_per_mw2=2.81 * 10**-4, 
+                        cp1_eur_per_mw=-0.3091, cp0_eur=90.0025)
+    pp.create_poly_cost(net, 6, et="gen", cp2_eur_per_mw2=3.04 * 10**-5, 
+                        cp1_eur_per_mw=-0.03496, cp0_eur=25.051)
+    pp.create_poly_cost(net, 7, et="gen", cp2_eur_per_mw2=5.555 * 10**-4, 
+                        cp1_eur_per_mw=-0.6666, cp0_eur=234.98)
+    pp.runopp(net)
+    print("Production optimale (MW) et coût total:")
+    print(net.res_gen[['p_mw']])
+    # Calcul du cout pour chaque générateur
+    for gen_idx in net.gen.index:
+        p = net.res_gen.at[gen_idx, 'p_mw']
+        cost = (net.poly_cost.at[gen_idx, 'cp2_eur_per_mw2'] * p**2 +
+                net.poly_cost.at[gen_idx, 'cp1_eur_per_mw'] * p +
+                net.poly_cost.at[gen_idx, 'cp0_eur'])
+        net.res_gen.at[gen_idx, 'cost_eur_per_h'] = cost
+    print(f"\nCoût de production par générateur (EUR/h):")
+    print(net.res_gen[['cost_eur_per_h']])
+    print(f"Coût de production total optimal : {net.res_cost:} EUR/h")
+
+if plot_6_3 == True:
+    import numpy as np
+    import matplotlib.pyplot as plt
+    x = np.linspace(100, 800, 1000)
+    y1 = 0.001       * (x - 350)**2 + 20
+    y2 = 4.622e-4    * (x - 375)**2 + 25
+    y3 = 5.625e-4    * (x - 400)**2 + 30
+    y4 = 9.876e-5    * (x - 450)**2 + 40
+    y5 = 2.8e-4      * (x - 500)**2 + 10
+    y6 = 2.81e-4     * (x - 550)**2 + 5
+    y7 = 3.04e-5     * (x - 575)**2 + 15
+    y8 = 5.555e-4    * (x - 600)**2 + 35
+
+    plt.figure(figsize=(12, 8))
+    plt.plot(x, y1, label='$f_{G1}(x)$', color='gray')
+    plt.plot(x, y2, label='$f_{G2}(x)$', color='gray')
+    plt.plot(x, y3, label='$f_{G3}(x)$', color='gray')
+    plt.plot(x, y4, label='$f_{G4}(x)$', color='orange')
+    plt.plot(x, y5, label='$f_{G5}(x)$', color='purple')
+    plt.plot(x, y6, label='$f_{G6}(x)$', color='gray')
+    plt.plot(x, y7, label='$f_{G7}(x)$', color='pink')
+    plt.plot(x, y8, label='$f_{G8}(x)$', color='gray')
+    plt.title("Fonctions de Coût des Générateurs (100 - 800 MW)", fontsize=16)
+    plt.xlabel("Puissance de sortie $x$ (MW)", fontsize=12)
+    plt.ylabel("Coût", fontsize=12)
+    plt.grid(True, which='both', linestyle='--', alpha=0.7)
+    plt.legend(fontsize=12)
+    plt.xlim(100, 800)   
+
+    # 5. Affichage
+    plt.show()
