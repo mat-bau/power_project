@@ -170,7 +170,6 @@ if net.converged:
     print("\nBus Voltages (pu):")
     print(net.res_bus[['vm_pu', 'va_degree']])
     print("\nLine Loading (%):")
-    # Include line name and bus connections for identification
     line_results = net.res_line[['loading_percent', 'p_from_mw', 'q_from_mvar']].copy()
     line_results.insert(0, 'name', net.line['name'].values)
     line_results.insert(1, 'from_bus', net.line['from_bus'].map(net.bus['name']).values)
@@ -181,7 +180,7 @@ if net.converged:
 else:
     print("Power flow did not converge!")
 
-line_idx = net.line[(net.line['from_bus'] == N1) & (net.line['to_bus'] == N4)].index[0]
+line_idx = net.line[(net.line['from_bus'] == N5) & (net.line['to_bus'] == N4)].index[0]
 from_bus = net.line.at[line_idx, 'from_bus']
 to_bus = net.line.at[line_idx, 'to_bus']
 
@@ -244,7 +243,7 @@ print(f"\n=== Ligne {net.line.at[line_idx, 'name']} ===")
 print(f"\n--- Paramètres de base ---")
 print(f"Sbase: {Sbase_MVA} MVA")
 print(f"Vbase: {Vbase_kV} kV (ligne-ligne)")
-print(f"Zbase: {Zbase:.3f} Ω")
+print(f"Zbase: {Zbase:.3f} ohm")
 print(f"Ybase: {Ybase:.6f} S")
 
 print(f"\n--- Impédances de ligne ---")
@@ -303,8 +302,8 @@ P_to_calc = S_to_pu.real * Sbase_MVA
 Q_to_calc = S_to_pu.imag * Sbase_MVA
 
 # Pertes
-P_loss_calc = P_from_calc - P_to_calc
-Q_loss_calc = Q_from_calc - Q_to_calc
+P_loss_calc = P_from_calc + P_to_calc
+Q_loss_calc = Q_from_calc + Q_to_calc
 
 # Comparaison avec pandapower
 P_to_pp = net.res_line.at[line_idx, 'p_to_mw']
@@ -323,13 +322,12 @@ print(f"Pertes P (pandapower): {P_loss_pp:.6f} MW\n")
 
 print(f"Pertes Q (calcul): {Q_loss_calc:.6f} MVAr")
 
-import numpy as np
 
 # ========================================
 # Calcul côté 'from' (déjà fait en Q1.1)
 # ========================================
 
-line_idx = net.line[(net.line['from_bus'] == N1) & 
+line_idx = net.line[(net.line['from_bus'] == N5) & 
                     (net.line['to_bus'] == N4)].index[0]
 
 from_bus = net.line.at[line_idx, 'from_bus']
@@ -374,24 +372,19 @@ P_from_calc = S_from_pu.real * Sbase_MVA
 Q_from_calc = S_from_pu.imag * Sbase_MVA
 
 # ========================================
-# Calcul côté 'to' (NOUVEAU)
+# Calcul côté 'to'
 # ========================================
 
-# Courant série (même que côté from, mais sens inverse pour la convention)
-# Le courant série circule de from vers to
 I_series_pu_to = I_series_pu  # Même courant physique
 
 # Courant shunt côté 'to'
 I_sh_to_pu = 0.5 * Ysh_pu * Vt_pu
 
 # Courant total côté 'to'
-# Convention: courant SORTANT de la ligne vers le bus 'to'
-# Dans le modèle π, le courant entrant au bus 'to' est:
 I_to_pu = I_series_pu - I_sh_to_pu  # Le shunt est en parallèle, donc soustrait
 
 # Puissance côté 'to'
 # Convention: puissance ENTRANT dans le bus 'to' (sortant de la ligne)
-# Donc le signe est inversé par rapport au flux physique
 S_to_pu = Vt_pu * np.conj(I_to_pu)
 P_to_calc = -S_to_pu.real * Sbase_MVA  # Négatif car convention inverse
 Q_to_calc = -S_to_pu.imag * Sbase_MVA
@@ -401,10 +394,10 @@ Q_to_calc = -S_to_pu.imag * Sbase_MVA
 # ========================================
 
 # Pertes actives
-Delta_P_calc = P_from_calc + P_to_calc  # ✅ SOMME ALGÉBRIQUE
+Delta_P_calc = P_from_calc + P_to_calc  
 
 # Pertes/Génération réactives
-Delta_Q_calc = Q_from_calc + Q_to_calc  # ✅ SOMME ALGÉBRIQUE
+Delta_Q_calc = Q_from_calc + Q_to_calc 
 
 # ========================================
 # Comparaison avec pandapower
@@ -423,10 +416,10 @@ Delta_Q_pp = Q_from_pp + Q_to_pp
 # ========================================
 
 print(f"\n{'='*60}")
-print(f"Q1.2 : BILAN DE PUISSANCE LIGNE N1-N4")
+print(f"Q1.2 : BILAN DE PUISSANCE LIGNE 5-N4")
 print(f"{'='*60}")
 
-print(f"\n--- Puissances côté 'from' (N1) ---")
+print(f"\n--- Puissances côté 'from' (N5) ---")
 print(f"P_from (calcul):     {P_from_calc:>10.4f} MW")
 print(f"P_from (pandapower): {P_from_pp:>10.4f} MW")
 print(f"Q_from (calcul):     {Q_from_calc:>10.4f} MVAr")
@@ -449,16 +442,16 @@ print(f"Erreur:              {abs(Delta_Q_calc - Delta_Q_pp):>10.4f} MVAr")
 
 print(f"\n--- Interprétation ---")
 if Delta_P_calc > 0:
-    print(f"✓ Pertes actives: {Delta_P_calc:.4f} MW (effet Joule)")
+    print(f" Pertes actives: {Delta_P_calc:.4f} MW (effet Joule)")
 else:
-    print(f"⚠ Gain actif impossible: {Delta_P_calc:.4f} MW")
+    print(f" Gain actif impossible: {Delta_P_calc:.4f} MW")
 
 if Delta_Q_calc > 0:
-    print(f"✓ Génération réactive nette: {Delta_Q_calc:.4f} MVAr (effet capacitif)")
+    print(f" Génération réactive nette: {Delta_Q_calc:.4f} MVAr (effet capacitif)")
 elif Delta_Q_calc < 0:
-    print(f"✓ Consommation réactive nette: {abs(Delta_Q_calc):.4f} MVAr (effet inductif)")
+    print(f" Consommation réactive nette: {abs(Delta_Q_calc):.4f} MVAr (effet inductif)")
 else:
-    print(f"✓ Pas de pertes/génération réactive nette")
+    print(f" Pas de pertes/génération réactive nette")
 
 print(f"\n--- Vérification physique ---")
 # Les pertes Joule théoriques
@@ -474,14 +467,14 @@ import numpy as np
 # DONNÉES DE LA LIGNE
 # ========================================
 
-line_idx = net.line[(net.line['from_bus'] == N1) & 
+line_idx = net.line[(net.line['from_bus'] == N5) & 
                     (net.line['to_bus'] == N4)].index[0]
 
 # Paramètres par km
-r_per_km = net.line.at[line_idx, 'r_ohm_per_km']  # Ω/km
-x_per_km = net.line.at[line_idx, 'x_ohm_per_km']  # Ω/km
-c_per_km = net.line.at[line_idx, 'c_nf_per_km']   # nF/km
-length_km = net.line.at[line_idx, 'length_km']    # km
+r_per_km = net.line.at[line_idx, 'r_ohm_per_km']  
+x_per_km = net.line.at[line_idx, 'x_ohm_per_km']  
+c_per_km = net.line.at[line_idx, 'c_nf_per_km']   
+length_km = net.line.at[line_idx, 'length_km']    
 
 # Tension nominale (ligne-ligne)
 Vn_kV = net.bus.at[net.line.at[line_idx, 'from_bus'], 'vn_kv']  # 380 kV
@@ -499,18 +492,18 @@ print(f"{'='*60}")
 # ========================================
 
 # Impédance série par km (complexe)
-z_per_km = r_per_km + 1j * x_per_km  # Ω/km
+z_per_km = r_per_km + 1j * x_per_km 
 
 # Admittance shunt par km (complexe)
 # y_per_km = G + j*ω*C, avec G ≈ 0 (pas de conductance)
-C_per_km_F = c_per_km * 1e-9  # Conversion nF → F
+C_per_km_F = c_per_km * 1e-9 
 y_per_km = 1j * omega * C_per_km_F  # S/km
 
 # Impédance caractéristique (complex)
-Zc = np.sqrt(z_per_km / y_per_km)  # Ω
+Zc = np.sqrt(z_per_km / y_per_km)
 
 print(f"\n--- Paramètres de ligne (par km) ---")
-print(f"z (série):   {abs(z_per_km):.3f} ∠ {np.angle(z_per_km, deg=True):.2f}° Ω/km")
+print(f"z (série):   {abs(z_per_km):.3f} ∠ {np.angle(z_per_km, deg=True):.2f}° ohm/km")
 print(f"y (shunt):   {abs(y_per_km):.6e} ∠ {np.angle(y_per_km, deg=True):.2f}° S/km")
 print(f"\n--- Impédance caractéristique ---")
 print(f"Zc = {abs(Zc):.2f} ∠ {np.angle(Zc, deg=True):.2f}° Ω")
@@ -546,23 +539,6 @@ print(f"S_from = {S_from:.2f} MVA")
 print(f"\nLoading par rapport au SIL : {loading_SIL:.1f}%")
 
 # ========================================
-# INTERPRÉTATION
-# ========================================
-
-print(f"\n--- Interprétation ---")
-if loading_SIL < 100:
-    print(f"✓ La ligne opère en dessous de son SIL ({loading_SIL:.1f}%)")
-    print(f"  → Comportement inductif dominant")
-    print(f"  → Consommation de puissance réactive")
-elif loading_SIL > 100:
-    print(f"⚠ La ligne opère au-dessus de son SIL ({loading_SIL:.1f}%)")
-    print(f"  → Comportement capacitif dominant")
-    print(f"  → Génération de puissance réactive")
-else:
-    print(f"✓ La ligne opère exactement à son SIL")
-    print(f"  → Équilibre parfait entre effets inductif et capacitif")
-
-# ========================================
 # VÉRIFICATION ALTERNATIVE
 # ========================================
 
@@ -575,8 +551,8 @@ Zc_alternative = np.sqrt(L_per_km_H / C_per_km_F)
 print(f"\n--- Vérification ---")
 print(f"L = {L_per_km_H:.6f} H/km")
 print(f"C = {C_per_km_F:.9f} F/km")
-print(f"Zc (√(L/C)) = {Zc_alternative:.2f} Ω")
-print(f"Écart avec calcul direct : {abs(abs(Zc) - Zc_alternative):.4f} Ω")
+print(f"Zc ((L/C)^(1/2)) = {Zc_alternative:.2f} ohm")
+print(f"Écart avec calcul direct : {abs(abs(Zc) - Zc_alternative):.4f} ohm")
 
 # ========================================
 # COMPARAISON MODULE vs MAGNITUDE
@@ -599,11 +575,11 @@ import numpy as np
 # Q1.4 : COURANT DANS LA LIGNE ET COMPARAISON
 # ========================================
 
-line_idx = net.line[(net.line['from_bus'] == N1) & 
+line_idx = net.line[(net.line['from_bus'] == N5) & 
                     (net.line['to_bus'] == N4)].index[0]
 
 print(f"\n{'='*60}")
-print(f"Q1.4 : COURANT DANS LA LIGNE N1-N4")
+print(f"Q1.4 : COURANT DANS LA LIGNE N5-N4")
 print(f"{'='*60}")
 
 # ========================================
@@ -706,11 +682,11 @@ print(f"\n--- Comparaison au courant nominal ---")
 print(f"I_from / I_max = {I_from_ka_calc:.4f} / {I_max_ka:.4f} = {loading_percent_calc:.2f}%")
 
 if loading_percent_calc < 100:
-    print(f"✓ La ligne est exploitée en sécurité ({loading_percent_calc:.1f}% de charge)")
+    print(f"La ligne est exploitée en sécurité ({loading_percent_calc:.1f}% de charge)")
 elif loading_percent_calc < 110:
-    print(f"⚠ La ligne est proche de sa limite ({loading_percent_calc:.1f}% de charge)")
+    print(f"La ligne est proche de sa limite ({loading_percent_calc:.1f}% de charge)")
 else:
-    print(f"❌ SURCHARGE ! La ligne dépasse sa capacité ({loading_percent_calc:.1f}% de charge)")
+    print(f"SURCHARGE ! La ligne dépasse sa capacité ({loading_percent_calc:.1f}% de charge)")
 
 # ========================================
 # CALCUL DU COURANT NOMINAL THÉORIQUE
@@ -723,7 +699,7 @@ else:
 print(f"\n--- Informations complémentaires ---")
 print(f"Puissance nominale (si basée sur I_max) :")
 S_nominal_MVA = np.sqrt(3) * vn_kv * I_max_ka
-print(f"S_nominal = √3 · V_n · I_max = √3 · {vn_kv} · {I_max_ka:.4f}")
+print(f"S_nominal = 3^(1/2) · V_n · I_max = √3 · {vn_kv} · {I_max_ka:.4f}")
 print(f"S_nominal = {S_nominal_MVA:.2f} MVA")
 
 # Facteur de puissance actuel
