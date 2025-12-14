@@ -1219,8 +1219,3 @@ PF_bus = abs(P_bus_MW) / S_bus_MVA if S_bus_MVA != 0 else 0
 
 print(f"S_bus   : {S_bus_MVA:.2f} MVA")
 print(f"PF_bus  : {PF_bus:.4f}")
-
-print(f"\nNote : Les résultats pandapower incluent tous les éléments")
-print(f"connectés au bus (charge + shunt + flux réseaux)")
-
-
