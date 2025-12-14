@@ -1030,11 +1030,11 @@ print(f"{'='*70}")
 
 
 # ========================================
-# Q1.8 : FACTEUR DE PUISSANCE AU NOEUD Ne
+# Q1.8 : FACTEUR DE PUISSANCE AU NOEUD N203
 # ========================================
 
 print(f"\n{'='*60}")
-print(f"Q1.8 : FACTEUR DE PUISSANCE AU NOEUD Ne")
+print(f"Q1.8 : FACTEUR DE PUISSANCE AU NOEUD N203")
 print(f"{'='*60}")
 
 Ne = N203
